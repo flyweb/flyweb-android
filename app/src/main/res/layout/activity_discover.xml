@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/activity_discover">
+
+    <!-- Top-level bar. -->
+    <LinearLayout
+        android:id="@+id/discover_top_bar"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="40sp"
+        android:layout_weight="0"
+        android:background="@drawable/discover_top_gradient">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="30sp"
+            android:layout_marginLeft="5sp"
+            android:layout_marginTop="5sp"
+            android:src="@drawable/logo_flyweb_white" />
+
+        <TextView
+            android:id="@+id/discover_top_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#C88"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="5sp"
+            android:layout_marginTop="5sp"
+            android:text="FlyWeb Services" />
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/discover_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:divider="@android:color/transparent">
+
+    </ListView>
+
+</LinearLayout>
