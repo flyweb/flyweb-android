@@ -22,12 +22,10 @@ public class PacketEncoder {
         if (dotted.endsWith(".")) {
             dotted = dotted.substring(0, dotted.length() - 1);
         }
-        Log.e("PacketEncoder", "Converting " + dotted);
         List<String> result = new ArrayList<String>();
         for (String str : dotted.split("\\.")) {
             result.add(str);
         }
-        Log.e("PacketEncoder", "Converted " + dotted + " => " + result);
         return result;
     }
 
@@ -48,8 +46,8 @@ public class PacketEncoder {
     }
 
     public void writeInt16(int i) {
-        mStream.write((i >> 8) & 0xff);
-        mStream.write(i & 0xff);
+        writeInt8(i >> 8);
+        writeInt8(i);
     }
 
     public void writeInt8(int i) {

@@ -26,10 +26,12 @@ public class PacketParser {
         StringBuilder builder = new StringBuilder();
 
         Iterator<String> iter = name.iterator();
-        builder.append(iter.next());
-        while (iter.hasNext()) {
-            builder.append(".");
+        if (iter.hasNext()) {
             builder.append(iter.next());
+            while (iter.hasNext()) {
+                builder.append(".");
+                builder.append(iter.next());
+            }
         }
         return builder.toString();
     }
@@ -59,9 +61,6 @@ public class PacketParser {
     public List<String> readLabel(InputStream ins, PacketParser basePacket) throws IOException {
         List<String> result = new ArrayList<>();
         readLabelInto(result, ins, basePacket);
-        if (result.isEmpty()) {
-            throw new IOException("DNS Packet had empty label.");
-        }
         return result;
     }
 
@@ -102,9 +101,12 @@ public class PacketParser {
     }
     public byte[] readBytesExact(InputStream ins, int nbytes) throws IOException {
         byte[] bytes = new byte[nbytes];
+        if (nbytes == 0) {
+            return bytes;
+        }
         int nread = ins.read(bytes);
         if (nread < nbytes) {
-            throw new IOException("Premature end of DNS packet.");
+            throw new IOException("Premature end of DNS packet (nbytes=" + nbytes + ").");
         }
         return bytes;
     }

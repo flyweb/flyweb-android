@@ -1,5 +1,7 @@
 package ca.vijayan.flyweb.mdns;
 
+import android.util.Log;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -299,6 +301,21 @@ public class DNSPacket {
         void setRC(int RC) {
             mRC = RC;
         }
+
+        @Override
+        public String toString() {
+            return "Flags{" +
+                    "QR=" + mQR + "," +
+                    "OP=" + mOP + "," +
+                    "AA=" + mAA + "," +
+                    "mTC=" + mTC + "," +
+                    "RD=" + mRD + "," +
+                    "RA=" + mRA + "," +
+                    "UN=" + mUN + "," +
+                    "AD=" + mAD + "," +
+                    "CD=" + mCD + "," +
+                    "RC=" + mRC + "}";
+        }
     }
 
     public static enum SectionType {
@@ -328,6 +345,19 @@ public class DNSPacket {
         mQuestionRecords.add(question);
     }
 
+    public List<QuestionRecord> getQuestionRecords() {
+        return mQuestionRecords;
+    }
+    public List<ResourceRecord> getAnswerRecords() {
+        return mAnswerRecords;
+    }
+    public List<ResourceRecord> getAuthorityRecords() {
+        return mAuthorityRecords;
+    }
+    public List<ResourceRecord> getAdditionalRecords() {
+        return mAdditionalRecords;
+    }
+
     public void parsePacket(byte[] packetData) throws IOException {
         PacketParser parser = new PacketParser(packetData);
 
@@ -341,37 +371,51 @@ public class DNSPacket {
         int flags = parser.readInt16();
         mFlags = Flags.decodeInt(flags);
 
+        Log.e("DNSPacket", "Parsed flags: " + mFlags.toString());
+
         // Read number of records for each type.
         int numQuestions = parser.readInt16();
         int numAnswers = parser.readInt16();
         int numAuthority = parser.readInt16();
         int numAdditional = parser.readInt16();
 
+        Log.e("DNSPacket",
+                "qs=" + numQuestions + ", an=" + numAnswers +
+                ", au=" + numAuthority + ", ad=" + numAdditional);
+
         // Parse question records.
         for (int i = 0; i < numQuestions; i++) {
             QuestionRecord qr = new QuestionRecord();
+            Log.e("DNSPacket", "Parsing question " + i);
             qr.parse(parser);
+            Log.e("DNSPacket", "Parsed question " + i + ": " + qr.toString());
             mQuestionRecords.add(qr);
         }
 
         // Parse answer records.
         for (int i = 0; i < numAnswers; i++) {
             ResourceRecord rr = new ResourceRecord();
+            Log.e("DNSPacket", "Parsing answer " + i);
             rr.parse(parser);
+            Log.e("DNSPacket", "Parsed answer " + i + ": " + rr.toString());
             mAnswerRecords.add(rr);
         }
 
         // Parse authority records.
         for (int i = 0; i < numAuthority; i++) {
             ResourceRecord rr = new ResourceRecord();
+            Log.e("DNSPacket", "Parsing authority " + i);
             rr.parse(parser);
+            Log.e("DNSPacket", "Parsed authority " + i + ": " + rr.toString());
             mAuthorityRecords.add(rr);
         }
 
         // Parse additional records.
         for (int i = 0; i < numAdditional; i++) {
             ResourceRecord rr = new ResourceRecord();
+            Log.e("DNSPacket", "Parsing additional " + i);
             rr.parse(parser);
+            Log.e("DNSPacket", "Parsed additional " + i + ": " + rr.toString());
             mAdditionalRecords.add(rr);
         }
     }

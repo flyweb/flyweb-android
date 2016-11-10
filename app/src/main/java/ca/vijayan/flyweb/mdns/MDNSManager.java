@@ -7,19 +7,11 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
-import java.net.SocketAddress;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -27,73 +19,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 
 public class MDNSManager {
-    static class CachedRecord {
-        Date mTimeAdded;
-        QuestionRecord mQuestion;
-        ResourceRecord mRecord;
-
-        CachedRecord(QuestionRecord question, ResourceRecord record) {
-            mTimeAdded = new Date();
-            mQuestion = question;
-            mRecord = record;
-        }
-
-        Date getTimeAdded() {
-            return mTimeAdded;
-        }
-        QuestionRecord getQuestion() {
-            return mQuestion;
-        }
-        ResourceRecord getRecord() {
-            return mRecord;
-        }
-
-        boolean isExpired() {
-            long expiryIntervalSeconds = mRecord.getTTL();
-            long timeNow = new Date().getTime();
-            return (timeNow - mTimeAdded.getTime()) >= expiryIntervalSeconds;
-        }
-    }
-
-    public synchronized void addRecord(QuestionRecord question, ResourceRecord record) {
-        int recordType = record.getRecordType();
-        Map<QuestionRecord, CachedRecord> recordMap = mCachedRecords.get(recordType);
-        if (recordMap == null) {
-            recordMap = new HashMap<QuestionRecord, CachedRecord>();
-            mCachedRecords.put(recordType, recordMap);
-        }
-
-        recordMap.put(question, new CachedRecord(question, record));
-    }
-
-    public synchronized ResourceRecord lookupRecord(QuestionRecord question) {
-        int recordType = question.getRecordType();
-        Map<QuestionRecord, CachedRecord> recordMap = mCachedRecords.get(recordType);
-        if (recordMap == null) {
-            return null;
-        }
-
-        CachedRecord cachedRecord = recordMap.get(question);
-        if (cachedRecord == null) {
-            return null;
-        }
-
-        return cachedRecord.getRecord();
-    }
-
-    public synchronized void removeExpiredRecords() {
-        for (Map.Entry<Integer, Map<QuestionRecord, CachedRecord>> entry : mCachedRecords.entrySet()) {
-            Set<QuestionRecord> toRemove = new HashSet<>();
-            for (Map.Entry<QuestionRecord, CachedRecord> recordEntry : entry.getValue().entrySet()) {
-                if (recordEntry.getValue().isExpired()) {
-                    toRemove.add(recordEntry.getKey());
-                }
-            }
-            for (QuestionRecord qr : toRemove) {
-                entry.getValue().remove(qr);
-            }
-        }
-    }
 
     static byte[] MDNS_ADDRESS_BYTES = new byte[] { (byte)224, 0, 0, (byte)251 };
     static InetAddress getMDNSAddress() {
@@ -106,24 +31,21 @@ public class MDNSManager {
     }
     static int MDNS_PORT = 5353;
 
-    Thread mPollThread;
+    Thread mQueryThread;
     Thread mReceiveThread;
     Thread mPassiveThread;
     MulticastSocket mPassiveSocket;
-    DatagramSocket mSocket;
-
-    // Map of all cached records by type.
-    // Keys of map are taken from DNSPacket.RECORD_TYPE_* values.
-    Map<Integer, Map<QuestionRecord, CachedRecord>> mCachedRecords;
-    Queue<QuestionRecord> mPollQueue;
+    DatagramSocket mQuerySocket;
+    Queue<QuestionRecord> mQueryQueue;
+    MDNSCache mCache;
 
     boolean mDone;
 
     public MDNSManager() {
-        mPollThread = new Thread(new Runnable() {
+        mQueryThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                runPoll();
+                runQuery();
             }
         });
         mReceiveThread = new Thread(new Runnable() {
@@ -142,42 +64,51 @@ public class MDNSManager {
         try {
             mPassiveSocket = new MulticastSocket(MDNS_PORT);
             mPassiveSocket.joinGroup(getMDNSAddress());
-            mSocket = new DatagramSocket();
+            mQuerySocket = new DatagramSocket();
         } catch (Exception exc) {
             Log.e("MDNSManager", "Failed to open sockets", exc);
             mPassiveSocket = null;
-            mSocket = null;
+            mQuerySocket = null;
         }
-        mCachedRecords = new HashMap<>();
-        mPollQueue = new ConcurrentLinkedQueue<>();
+        mQueryQueue = new ConcurrentLinkedQueue<>();
+        mCache = new MDNSCache();
         mDone = false;
     }
 
     public void start() {
-        mPollThread.start();
+        mQueryThread.start();
         mReceiveThread.start();
         mPassiveThread.start();
     }
 
     synchronized public void stop() {
         mDone = true;
+        mQuerySocket.close();
+        mPassiveSocket.close();
         this.notify();
-        while (mPollThread.isAlive() || mReceiveThread.isAlive()) {
+        while (mQueryThread.isAlive() || mReceiveThread.isAlive()) {
             try {
-                if (mPollThread.isAlive()) {
-                    mPollThread.join();
+                if (mQueryThread.isAlive()) {
+                    mQueryThread.join();
                 }
                 if (mReceiveThread.isAlive()) {
                     mReceiveThread.join();
+                }
+                if (mPassiveThread.isAlive()) {
+                    mPassiveThread.join();
                 }
             } catch (InterruptedException exc) {
             }
         }
     }
 
-    public void runPoll() {
+    public void runQuery() {
         while (!mDone) {
-            Log.d("MDNSManager", "runPoll - TOP");
+            Log.d("MDNSManager", "runQuery - TOP");
+
+            if (mQuerySocket.isClosed()) {
+                break;
+            }
             //poll();
             try {
                 synchronized(this) {
@@ -216,7 +147,7 @@ public class MDNSManager {
                                                    getMDNSAddress(), MDNS_PORT);
 
         try {
-            mSocket.send(packet);
+            mQuerySocket.send(packet);
         } catch (IOException exc) {
             Log.e("MDNSManager", "poll: Failed to send packet", exc);
             return;
@@ -226,6 +157,9 @@ public class MDNSManager {
     public void runReceive() {
         for (;;) {
             Log.d("MDNSManager", "runReceive - TOP");
+            if (mQuerySocket.isClosed()) {
+                break;
+            }
             receive();
         }
     }
@@ -233,7 +167,7 @@ public class MDNSManager {
     void receive() {
         DatagramPacket packet = new DatagramPacket(new byte[4096], 4096);
         try {
-            mSocket.receive(packet);
+            mQuerySocket.receive(packet);
         } catch (IOException exc) {
             Log.e("MDNSManager", "poll: Failed to receive packet", exc);
             return;
@@ -281,6 +215,9 @@ public class MDNSManager {
             Log.e("MDNSManager", "Error parsing DNS packet", exc);
             return;
         }
+
+        // Add the DNS packet to the MDNS cache.
+        mCache.addDNSPacket(dnsPacket);
 
         Log.e("MDNSManager", "GOT PACKET: " + dnsPacket.toString());
     }

@@ -1,5 +1,7 @@
 package ca.vijayan.flyweb.mdns;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Pair;
 
 import java.io.ByteArrayOutputStream;
@@ -15,8 +17,10 @@ import java.util.Map;
  * Created by kvijayan on 08/11/16.
  */
 
-public class ResourceData {
+public abstract class ResourceData {
     protected ResourceData() {}
+
+    abstract void writeToParcel(Parcel parcel, int i);
 
     public static class A extends ResourceData {
         byte[] mIp;
@@ -40,6 +44,16 @@ public class ResourceData {
 
         public String toString() {
             return "A[" + mIp[0] + "." + mIp[1] + "." + mIp[2] + "." + mIp[3] + "]";
+        }
+
+        @Override
+        public void writeToParcel(Parcel parcel, int i) {
+            parcel.writeByteArray(mIp);
+        }
+        public static A readFromParcel(Parcel parcel) {
+            byte[] ip = new byte[4];
+            parcel.readByteArray(ip);
+            return new A(ip);
         }
     }
 
@@ -67,6 +81,16 @@ public class ResourceData {
 
         public String toString() {
             return "PTR[" + PacketParser.nameToDotted(mServiceName) + "]";
+        }
+
+        @Override
+        public void writeToParcel(Parcel parcel, int i) {
+            parcel.writeStringList(mServiceName);
+        }
+        public static PTR readFromParcel(Parcel parcel) {
+            List<String> serviceName = new ArrayList<>();
+            parcel.readStringList(serviceName);
+            return new PTR(serviceName);
         }
     }
 
@@ -120,6 +144,22 @@ public class ResourceData {
             return "SRV[" + PacketParser.nameToDotted(mTarget) + ":" + mPort +
                     ", prio=" + mPriority + ", weight=" + mWeight + "]";
         }
+
+        @Override
+        public void writeToParcel(Parcel parcel, int i) {
+            parcel.writeInt(mPriority);
+            parcel.writeInt(mWeight);
+            parcel.writeInt(mPort);
+            parcel.writeStringList(mTarget);
+        }
+        public static SRV readFromParcel(Parcel parcel) {
+            int priority = parcel.readInt();
+            int weight = parcel.readInt();
+            int port = parcel.readInt();
+            List<String> target = new ArrayList<>();
+            parcel.readStringList(target);
+            return new SRV(priority, weight, port, target);
+        }
     }
 
     public static class TXT extends ResourceData {
@@ -129,6 +169,11 @@ public class ResourceData {
         public TXT() {
             mRawEntries = null;
             mMap = null;
+        }
+
+        public TXT(List<byte[]> rawEntries) {
+            mRawEntries = rawEntries;
+            generateMapFromRawEntries();
         }
 
         public TXT(Map<String, byte[]> entries) {
@@ -156,7 +201,6 @@ public class ResourceData {
 
         public void parse(PacketParser recordParser) throws IOException {
             mRawEntries = new ArrayList<byte[]>();
-            mMap = new HashMap<>();
 
             for (;;) {
                 int len = recordParser.maybeReadInt8();
@@ -167,15 +211,26 @@ public class ResourceData {
                 assert (len <= 0xff);
                 byte[] data = recordParser.readBytesExact(len);
                 mRawEntries.add(data);
+            }
 
+            generateMapFromRawEntries();
+        }
+
+        void generateMapFromRawEntries() {
+            mMap = new HashMap<>();
+            for (byte[] data : mRawEntries) {
                 // Find first occurrence of '='
                 for (int i = 0; i < data.length; i++) {
                     if (data[i] == '=') {
                         // Parse string.
                         byte[] firstPart = Arrays.copyOfRange(data, 0, i);
                         byte[] secondPart = Arrays.copyOfRange(data, i+1, data.length);
-                        String key = new String(firstPart, "UTF-8");
-                        mMap.put(key, secondPart);
+                        try {
+                            String key = new String(firstPart, "UTF-8");
+                            mMap.put(key, secondPart);
+                        } catch (Exception exc) {
+                            throw new RuntimeException("Unexpected unsupported encoding UTF-8", exc);
+                        }
                     }
                 }
             }
@@ -195,6 +250,26 @@ public class ResourceData {
             }
             builder.append("]");
             return builder.toString();
+        }
+
+        @Override
+        public void writeToParcel(Parcel parcel, int i) {
+            parcel.writeInt(mRawEntries.size());
+            for (byte[] entry : mRawEntries) {
+                parcel.writeInt(entry.length);
+                parcel.writeByteArray(entry);
+            }
+        }
+        public static TXT readFromParcel(Parcel parcel) {
+            int numEntries = parcel.readInt();
+            List<byte[]> rawEntries = new ArrayList<>();
+            for (int i = 0; i < numEntries; i++) {
+                int length = parcel.readInt();
+                byte[] entry = new byte[length];
+                parcel.readByteArray(entry);
+                rawEntries.add(entry);
+            }
+            return new TXT(rawEntries);
         }
     }
 }
