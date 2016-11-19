@@ -48,7 +48,9 @@ class DiscoveryManager implements NsdManager.DiscoveryListener {
     static enum DesiredState { ACTIVE, INACTIVE }
     DesiredState mDesiredState;
 
-    DiscoveryManager(Activity context, Handler serviceInfoHandler) {
+    DiscoveryManager(Activity context, Handler serviceInfoHandler)
+            throws IOException
+    {
         Log.e("DiscoveryManager", "Initializing");
         mContext = context;
         mServiceInfoHandler = serviceInfoHandler;
@@ -72,7 +74,7 @@ class DiscoveryManager implements NsdManager.DiscoveryListener {
         Log.e("DiscoveryManager", "stopDiscovery()");
         mDesiredState = DesiredState.INACTIVE;
         makeInactive();
-        mMDNSManager.stop();
+        mMDNSManager.shutdown();
     }
 
     private void makeActive() {

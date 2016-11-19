@@ -34,6 +34,10 @@ public class ResourceRecord extends Record implements Parcelable {
         mTTL = ttl;
     }
 
+    ResourceData getResourceData() {
+        return mResourceData;
+    }
+
     public void parse(PacketParser parser) throws IOException {
         // Parse core resource fields.
         super.parse(parser);

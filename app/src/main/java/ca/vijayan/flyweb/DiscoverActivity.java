@@ -11,6 +11,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 
+import java.io.IOException;
+
 public class DiscoverActivity extends Activity implements Handler.Callback {
 
     static public final String EXTRA_SERVICE_INFO = "ca.vijayan.flyweb.SERVICE_INFO";
@@ -29,8 +31,12 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
         mHandler = new Handler(this);
 
         mDiscoverListAdapter = new DiscoverListAdapter(this);
-        mDiscoveryManager = new DiscoveryManager(this, mHandler);
-        mDiscoveryManager.startDiscovery();
+        try {
+            mDiscoveryManager = new DiscoveryManager(this, mHandler);
+            mDiscoveryManager.startDiscovery();
+        } catch (IOException exc) {
+            Log.e("DiscoverActivity", "Failed to instantiate Discovery Manager", exc);
+        }
 
         ViewGroup layout = (ViewGroup) findViewById(R.id.activity_discover);
         ListView discoverListView = (ListView) layout.findViewById(R.id.discover_list);
