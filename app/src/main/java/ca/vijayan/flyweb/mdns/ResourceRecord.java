@@ -37,6 +37,26 @@ public class ResourceRecord extends Record implements Parcelable {
     ResourceData getResourceData() {
         return mResourceData;
     }
+    public ResourceData.PTR getPTRData() {
+        if (getRecordType() != DNSPacket.RECORD_TYPE_PTR) {
+            return null;
+        }
+        if (mResourceData == null) {
+            return null;
+        }
+        assert (mResourceData instanceof ResourceData.PTR);
+        return (ResourceData.PTR) mResourceData;
+    }
+    public ResourceData.A getAData() {
+        if (getRecordType() != DNSPacket.RECORD_TYPE_A) {
+            return null;
+        }
+        if (mResourceData == null) {
+            return null;
+        }
+        assert (mResourceData instanceof ResourceData.A);
+        return (ResourceData.A) mResourceData;
+    }
 
     public void parse(PacketParser parser) throws IOException {
         // Parse core resource fields.

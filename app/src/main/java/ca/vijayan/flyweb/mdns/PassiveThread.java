@@ -83,7 +83,6 @@ public class PassiveThread extends Thread {
         }
 
         // Add the DNS packet to the MDNS cache.
-        Log.e("PassiveThread", "GOT PACKET: " + dnsPacket.toString());
         mCache.addDNSPacket(dnsPacket);
     }
 }

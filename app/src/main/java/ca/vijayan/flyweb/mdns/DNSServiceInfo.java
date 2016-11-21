@@ -2,6 +2,7 @@ package ca.vijayan.flyweb.mdns;
 
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -53,9 +54,23 @@ public class DNSServiceInfo {
         return new DNSServiceInfo(mType, mName, mAttributes, mAddress, mPort);
     }
 
+    public static boolean attributesEqual(Map<String, byte[]> attr1,
+                                          Map<String, byte[]> attr2)
+    {
+        if (!attr1.keySet().equals(attr2.keySet())) {
+            return false;
+        }
+        for (String key : attr1.keySet()) {
+            if (!Arrays.equals(attr1.get(key), attr2.get(key))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public boolean isUpdated(DNSServiceInfo other) {
         assert(getKey().equals(other.getKey()));
-        return !mAttributes.equals(other.mAttributes) ||
+        return !attributesEqual(mAttributes, mAttributes) ||
                 !mAddress.equals(other.mAddress) ||
                 (mPort != other.mPort);
     }
@@ -119,6 +134,12 @@ public class DNSServiceInfo {
         @Override
         public int hashCode() {
             return mHashCode;
+        }
+
+        @Override
+        public String toString() {
+            return "DNSServiceInfo.Key{" + mServiceInfo.getType().toString() + ":" +
+                    mServiceInfo.getName().toString() + "}";
         }
     }
 }

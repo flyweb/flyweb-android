@@ -48,6 +48,7 @@ public class MDNSManager implements MDNSCache.Listener {
 
     public void start() {
         mCache.start();
+        mCache.addListener(this);
         mQueryThread.start();
         mPassiveThread.start();
     }
@@ -63,14 +64,23 @@ public class MDNSManager implements MDNSCache.Listener {
     // Listener methods for service events
     @Override
     public void onDNSServiceFound(DNSServiceInfo info) {
-        Log.d("MDNSManager", "onDNSServiceFound: " + info.toString());
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "onDNSServiceFound: " + info.toString());
+        Log.e("MDNSManager", "============================================");
     }
     @Override
     public void onDNSServiceLost(DNSServiceInfo info) {
-        Log.d("MDNSManager", "onDNSServiceLost: " + info.toString());
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "onDNSServiceLost: " + info.toString());
+        Log.e("MDNSManager", "============================================");
     }
     @Override
     public void onDNSServiceChanged(DNSServiceInfo info, DNSServiceInfo oldInfo) {
-        Log.d("MDNSManager", "onDNSServiceChanged: " + info.toString());
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "////////////////////////////////////////////");
+        Log.e("MDNSManager", "onDNSServiceChanged: " + info.toString());
+        Log.e("MDNSManager", "============================================");
     }
 }

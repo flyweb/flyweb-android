@@ -77,7 +77,6 @@ public abstract class WorkerThread extends Thread {
     }
 
     public long setTimeout(int ms, Runnable runnable) {
-        Log.d(logName(), "Setting timeout for runnable in " + ms);
         long nowms = (new Date()).getTime();
         Date when = new Date(nowms + ms);
         long id = ++mNextTimeoutId;
@@ -147,10 +146,8 @@ public abstract class WorkerThread extends Thread {
 
     @Override
     public void run() {
-        Log.e(logName(), "run()");
         for (;;) {
             // Check for stop.
-            Log.d(logName(), "Checking for stop.");
             synchronized (this) {
                 if (mStop) {
                     break;
@@ -159,16 +156,12 @@ public abstract class WorkerThread extends Thread {
 
             // Execute all triggered timeouts.
             synchronized (mTimeouts) {
-                Log.d(logName(), "Executing timeouts (" + mTimeouts.size() + ")");
                 while (!mTimeouts.isEmpty() && mTimeouts.peek().isTriggered()) {
-                    Log.d(logName(), "Executing timeout");
                     mTimeouts.poll().run();
                 }
-                Log.d(logName(), "After executing timeouts (" + mTimeouts.size() + ")");
             }
 
             // Drain the queue.
-            Log.d(logName(), "Running runnables.");
             List<Runnable> nextRunnables = new ArrayList<>();
             synchronized (mRunnables) {
                 while (!mRunnables.isEmpty()) {
@@ -187,7 +180,6 @@ public abstract class WorkerThread extends Thread {
 
             // Calculate time to wait.
             long msToWait = calculateMsToWait();
-            Log.e(logName(), "Calculated time to wait:" + msToWait);
             synchronized (mRunnables) {
                 try {
                     if (msToWait < 0) {

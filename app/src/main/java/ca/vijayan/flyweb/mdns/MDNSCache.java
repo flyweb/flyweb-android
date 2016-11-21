@@ -43,9 +43,9 @@ public class MDNSCache extends WorkerThread {
         }
 
         boolean isExpired() {
-            long expiryIntervalSeconds = mRecord.getTTL();
+            long expiryIntervalMs = mRecord.getTTL() * 1000;
             long timeNow = new Date().getTime();
-            return (timeNow - mTimeAdded.getTime()) >= expiryIntervalSeconds;
+            return (timeNow - mTimeAdded.getTime()) >= expiryIntervalMs;
         }
     }
 
@@ -77,6 +77,11 @@ public class MDNSCache extends WorkerThread {
         public int hashCode() {
             return mName.hashCode();
         }
+
+        @Override
+        public String toString() {
+            return mName.toString();
+        }
     }
 
     public static interface Listener {
@@ -86,7 +91,7 @@ public class MDNSCache extends WorkerThread {
     }
 
     // Map of PTR records for names.
-    Map<Key, Set<CachedRecord>> mPTRRecords;
+    Map<Key, Map<Key, CachedRecord>> mPTRRecords;
     Map<Key, CachedRecord> mSRVRecords;
     Map<Key, CachedRecord> mTXTRecords;
     Map<Key, CachedRecord> mARecords;
@@ -105,14 +110,11 @@ public class MDNSCache extends WorkerThread {
     }
 
     public void addListener(final Listener listener) {
-        synchronized (mListeners) {
-            mListeners.add(listener);
-        }
-
         // Immediately call onFound for all known services.
         addRunnable(new Runnable() {
             @Override
             public void run() {
+                mListeners.add(listener);
                 for (DNSServiceInfo.Key key : mKnownServices.keySet()) {
                     listener.onDNSServiceFound(mKnownServices.get(key));
                 }
@@ -163,30 +165,35 @@ public class MDNSCache extends WorkerThread {
         Key key = new Key(rr.getName());
 
         if (rr.getRecordType() == DNSPacket.RECORD_TYPE_A) {
+            // Log.d("MDNSCache", "Adding A record: " + rr.toString());
             // Store the A record.
             mARecords.put(key, cr);
         }
 
         if (rr.getRecordType() == DNSPacket.RECORD_TYPE_PTR) {
-            Set<CachedRecord> crset = mPTRRecords.get(rr.getName());
+            // Log.d("MDNSCache", "Adding PTR record: " + rr.toString());
+            Map<Key, CachedRecord> crset = mPTRRecords.get(key);
             if (crset == null) {
-                crset = new HashSet<>();
+                crset = new HashMap<>();
                 mPTRRecords.put(key, crset);
             }
-            crset.add(cr);
+            crset.put(new Key(cr.getRecord().getPTRData().getServiceName()), cr);
         }
 
         if (rr.getRecordType() == DNSPacket.RECORD_TYPE_SRV) {
+            // Log.d("MDNSCache", "Adding SRV record: " + rr.toString());
             mSRVRecords.put(key, cr);
         }
 
         if (rr.getRecordType() == DNSPacket.RECORD_TYPE_TXT) {
+            // Log.d("MDNSCache", "Adding TXT record: " + rr.toString());
             mTXTRecords.put(key, cr);
         }
     }
 
+    private static final int CHECK_EXPIRED_RECORDS_INTERVAL = 100;
     private void setRemoveExpiredRecordsTimeout() {
-        setTimeout(100, new Runnable() {
+        setTimeout(CHECK_EXPIRED_RECORDS_INTERVAL, new Runnable() {
             @Override
             public void run() {
                 doRemoveExpiredRecordsAndReschedule();
@@ -199,28 +206,36 @@ public class MDNSCache extends WorkerThread {
     }
 
     public void removeExpiredRecords() {
-        Log.e("MDNSCache", "removeExpiredRecords()");
         // Remove expired PTR records.
-        for (Map.Entry<Key, Set<CachedRecord>> entry : mPTRRecords.entrySet()) {
-            List<CachedRecord> toRemove = new ArrayList<>();
-            Set<CachedRecord> recs = entry.getValue();
-            for (CachedRecord rec : recs) {
-                if (rec.isExpired()) {
-                    toRemove.add(rec);
+        int numRemoved = 0;
+        for (Map.Entry<Key, Map<Key, CachedRecord>> entry : mPTRRecords.entrySet()) {
+            List<Key> toRemove = new ArrayList<>();
+            Map<Key, CachedRecord> recs = entry.getValue();
+            for (Map.Entry<Key, CachedRecord> rec : recs.entrySet()) {
+                if (rec.getValue().isExpired()) {
+                    toRemove.add(rec.getKey());
                 }
             }
-            recs.removeAll(toRemove);
+            for (Key rk : toRemove) {
+                Log.d("MDNSCache", "Removing expired PTR record: " + rk.toString());
+                recs.remove(rk);
+            }
+            numRemoved += toRemove.size();
         }
 
         // Remove expired SRV, TXT, and A records.
-        removeExpiredRecordsFrom(mSRVRecords);
-        removeExpiredRecordsFrom(mTXTRecords);
-        removeExpiredRecordsFrom(mARecords);
+        numRemoved += removeExpiredRecordsFrom(mSRVRecords, "SRV");
+        numRemoved += removeExpiredRecordsFrom(mTXTRecords, "TXT");
+        numRemoved += removeExpiredRecordsFrom(mARecords, "A");
 
-        updateServiceInfo();
+        if (numRemoved > 0) {
+            updateServiceInfo();
+        }
     }
 
-    private static void removeExpiredRecordsFrom(Map<Key, CachedRecord> recordMap) {
+    private static int removeExpiredRecordsFrom(Map<Key, CachedRecord> recordMap,
+                                                String type)
+    {
         List<Key> toRemove = new ArrayList<>();
         for (Map.Entry<Key, CachedRecord> entry : recordMap.entrySet()) {
             if (entry.getValue().isExpired()) {
@@ -228,28 +243,50 @@ public class MDNSCache extends WorkerThread {
             }
         }
         for (Key key : toRemove) {
+            Log.d("MDNSCache", "Removing expired " + type + " record: " + key.mName.toString());
             recordMap.remove(key);
         }
+        return toRemove.size();
     }
 
     private void updateServiceInfo() {
+        /*
+        Log.d("MDNSCache", "updateServiceInfo()");
+        for (Map.Entry<Key, Map<Key, CachedRecord>> entry : mPTRRecords.entrySet()) {
+            Log.d("MDNSCache", "PTR " + entry.getKey().toString() + " {");
+            for (Map.Entry<Key, CachedRecord> cr : entry.getValue().entrySet()) {
+                Log.d("MDNSCache", "    " + cr.getValue().getRecord().getPTRData().toString());
+            }
+            Log.d("MDNSCache", "}");
+        }
+        */
+
         List<DNSServiceInfo> foundServices = new ArrayList<>();
         List<DNSServiceInfo> lostServices = new ArrayList<>();
         List<Pair<DNSServiceInfo, DNSServiceInfo>> changedServices = new ArrayList<>();
         recalculateKnownServices(foundServices, lostServices, changedServices);
 
-        synchronized (mListeners) {
-            for (Listener listener : mListeners) {
-                for (DNSServiceInfo lostService : lostServices) {
-                    listener.onDNSServiceFound(lostService);
-                }
-                for (Pair<DNSServiceInfo, DNSServiceInfo> changedService : changedServices) {
-                    listener.onDNSServiceChanged(changedService.first,
-                                                 changedService.second);
-                }
-                for (DNSServiceInfo foundService : foundServices) {
-                    listener.onDNSServiceLost(foundService);
-                }
+        for (DNSServiceInfo found : foundServices) {
+            Log.d("MDNSCache", "Found service: " + found.getKey().toString());
+        }
+        for (DNSServiceInfo lost : lostServices) {
+            Log.d("MDNSCache", "Lost service: " + lost.getKey().toString());
+        }
+        for (Pair<DNSServiceInfo, DNSServiceInfo> changed : changedServices) {
+            Log.d("MDNSCache", "Changed service: " + changed.first.getKey().toString());
+        }
+
+        for (Listener listener : mListeners) {
+            Log.d("MDNSCache", "Calling listener: " + listener);
+            for (DNSServiceInfo lostService : lostServices) {
+                listener.onDNSServiceLost(lostService);
+            }
+            for (Pair<DNSServiceInfo, DNSServiceInfo> changedService : changedServices) {
+                listener.onDNSServiceChanged(changedService.first,
+                                             changedService.second);
+            }
+            for (DNSServiceInfo foundService : foundServices) {
+                listener.onDNSServiceFound(foundService);
             }
         }
     }
@@ -265,9 +302,9 @@ public class MDNSCache extends WorkerThread {
         // Any service in newKnownServices that's not in mKnownServices, is found.
         for (DNSServiceInfo newSvc : newKnownServices) {
             if (mKnownServices.containsKey(newSvc.getKey())) {
-                found.add(newSvc);
-            } else {
                 sharedKeys.add(newSvc.getKey());
+            } else {
+                found.add(newSvc);
             }
         }
 
@@ -298,12 +335,12 @@ public class MDNSCache extends WorkerThread {
 
     private Set<DNSServiceInfo> computeKnownServiceSet() {
         Set<DNSServiceInfo> result = new HashSet<>();
-        for (Map.Entry<Key, Set<CachedRecord>> entry : mPTRRecords.entrySet()) {
-            for (CachedRecord cr : entry.getValue()) {
-                if (cr.isExpired()) {
+        for (Map.Entry<Key, Map<Key, CachedRecord>> entry : mPTRRecords.entrySet()) {
+            for (Map.Entry<Key, CachedRecord> cr : entry.getValue().entrySet()) {
+                if (cr.getValue().isExpired()) {
                     continue;
                 }
-                DNSServiceInfo svcInfo = resolveService(cr.getRecord());
+                DNSServiceInfo svcInfo = resolveService(cr.getValue().getRecord());
                 if (svcInfo != null) {
                     result.add(svcInfo);
                 }
@@ -324,10 +361,12 @@ public class MDNSCache extends WorkerThread {
         List<String> svcName = ptrData.getServiceName();
         Key svcKey = new Key(svcName, false);
 
+        // Log.d("MDNSCache", "resolveService() resolving: [" + svcName.toString() + "]");
+
         // Get SRV record.
         CachedRecord srvCached = mSRVRecords.get(svcKey);
         if (srvCached == null) {
-            Log.d("MDNSCache", "Did not find SRV entry for PTR.");
+            Log.e("MDNSCache", "Did not find SRV entry for PTR " + svcKey.toString());
             return null;
         }
         ResourceRecord srvRecord = srvCached.getRecord();
@@ -341,7 +380,7 @@ public class MDNSCache extends WorkerThread {
         // get TXT record.
         CachedRecord txtCached = mTXTRecords.get(svcKey);
         if (txtCached == null) {
-            Log.d("MDNSCache", "Did not find TXT entry for SRV.");
+            Log.e("MDNSCache", "Did not find TXT entry for SRV " + svcKey.toString());
             return null;
         }
         ResourceRecord txtRecord = txtCached.getRecord();
@@ -353,9 +392,9 @@ public class MDNSCache extends WorkerThread {
         Map<String, byte[]> txtMap = txtData.getMap();
 
         // get A record.
-        CachedRecord aCached = mTXTRecords.get(new Key(srvData.getTarget(), false));
+        CachedRecord aCached = mARecords.get(new Key(srvData.getTarget(), false));
         if (aCached == null) {
-            Log.d("MDNSCache", "Did not find A entry for SRV.");
+            Log.e("MDNSCache", "Did not find A entry for SRV " + srvData.getTarget().toString());
             return null;
         }
         ResourceRecord aRecord = aCached.getRecord();
@@ -368,9 +407,11 @@ public class MDNSCache extends WorkerThread {
         try {
             ipAddr = Inet4Address.getByAddress(aData.getIp());
         } catch (UnknownHostException exc) {
-            Log.d("MDNSCache", "Got UnknownHostException for ip.");
+            Log.e("MDNSCache", "Got UnknownHostException for ip.");
             return null;
         }
+
+        // Log.d("MDNSCache", "resolveService() resolved: [" + svcName.toString() + "]");
 
         return new DNSServiceInfo(svcType, svcName, txtMap, ipAddr, svcPort);
     }

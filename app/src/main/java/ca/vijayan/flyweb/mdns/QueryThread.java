@@ -62,7 +62,7 @@ public class QueryThread extends Thread {
 
     @Override
     public void run() {
-        mLastQueryTime = null;
+        mLastQueryTime = new Date();
         mQueue.add(makeFlyWebQuestion());
 
         TOP: for (;;) {
@@ -71,6 +71,13 @@ public class QueryThread extends Thread {
                 if (mStop) {
                     break;
                 }
+            }
+
+            // Add a new FlyWeb query to queue if enough time has passed since last one.
+            Date nowTime = new Date();
+            if ((nowTime.getTime() - mLastQueryTime.getTime()) >= ISSUE_QUERY_INTERVAL) {
+                mLastQueryTime = nowTime;
+                mQueue.add(makeFlyWebQuestion());
             }
 
             // Issue any query requests.
@@ -145,7 +152,6 @@ public class QueryThread extends Thread {
         }
 
         // Add the DNS packet to the MDNS cache.
-        Log.e("QueryThread", "GOT PACKET: " + dnsPacket.toString());
         mCache.addDNSPacket(dnsPacket);
     }
 }
