@@ -7,11 +7,16 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import ca.vijayan.flyweb.mdns.DNSServiceInfo;
+import ca.vijayan.flyweb.mdns.MDNSManager;
 
 public class DiscoverActivity extends Activity implements Handler.Callback {
 
@@ -19,23 +24,24 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
     static public final int MESSAGE_ADD_SERVICE = 0;
     static public final int MESSAGE_REMOVE_SERVICE = 1;
+    static public final int MESSAGE_UPDATE_SERVICE = 2;
 
     Handler mHandler;
     DiscoverListAdapter mDiscoverListAdapter;
-    DiscoveryManager mDiscoveryManager;
+    MDNSManager mMDNSManager;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_discover);
 
         mHandler = new Handler(this);
-
         mDiscoverListAdapter = new DiscoverListAdapter(this);
+
         try {
-            mDiscoveryManager = new DiscoveryManager(this, mHandler);
-            mDiscoveryManager.startDiscovery();
+            mMDNSManager = new MDNSManager(mHandler);
+            mMDNSManager.start();
         } catch (IOException exc) {
-            Log.e("DiscoverActivity", "Failed to instantiate Discovery Manager", exc);
+            Log.e("DiscoverActivity", "Failed to instantiate MDNSManager.", exc);
         }
 
         ViewGroup layout = (ViewGroup) findViewById(R.id.activity_discover);
@@ -45,7 +51,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
     public void onItemSelected(View target) {
         Intent intent = new Intent(this, BrowseActivity.class);
-        NsdServiceInfo serviceInfo = (NsdServiceInfo) target.getTag();
+        DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
         intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
         startActivity(intent);
     }
@@ -53,12 +59,20 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     @Override
     public boolean handleMessage(Message message) {
         if (message.what == MESSAGE_ADD_SERVICE) {
-            NsdServiceInfo serviceInfo = (NsdServiceInfo) message.obj;
+            Log.d("DiscoverActivity", "Got MESSAGE_ADD_SERVICE");
+            DNSServiceInfo serviceInfo = (DNSServiceInfo) message.obj;
             mDiscoverListAdapter.addServiceInfo(serviceInfo);
             return true;
         } else if (message.what == MESSAGE_REMOVE_SERVICE) {
-            NsdServiceInfo serviceInfo = (NsdServiceInfo) message.obj;
+            Log.d("DiscoverActivity", "Got MESSAGE_REMOVE_SERVICE");
+            DNSServiceInfo serviceInfo = (DNSServiceInfo) message.obj;
             mDiscoverListAdapter.removeServiceInfo(serviceInfo);
+            return true;
+        } else if (message.what == MESSAGE_UPDATE_SERVICE) {
+            Log.d("DiscoverActivity", "Got MESSAGE_UPDATE_SERVICE");
+            Pair<DNSServiceInfo, DNSServiceInfo> serviceInfo =
+                    (Pair<DNSServiceInfo, DNSServiceInfo>) message.obj;
+            mDiscoverListAdapter.updateServiceInfo(serviceInfo.first, serviceInfo.second);
             return true;
         }
         return false;

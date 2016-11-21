@@ -38,7 +38,6 @@ class DiscoveryManager implements NsdManager.DiscoveryListener {
     Activity mContext;
     Handler mServiceInfoHandler;
 
-    MDNSManager mMDNSManager;
     NsdManager mNsdManager;
     RichDataResolver mRichDataResolver;
 
@@ -57,7 +56,6 @@ class DiscoveryManager implements NsdManager.DiscoveryListener {
         mRichDataResolver = new RichDataResolver();
         mRichDataResolver.start();
 
-        mMDNSManager = new MDNSManager();
         mNsdManager = (NsdManager) mContext.getSystemService(Context.NSD_SERVICE);
         mCurrentState = CurrentState.INACTIVE;
         mDesiredState = DesiredState.INACTIVE;
@@ -67,14 +65,12 @@ class DiscoveryManager implements NsdManager.DiscoveryListener {
         Log.e("DiscoveryManager", "startDiscovery()");
         mDesiredState = DesiredState.ACTIVE;
         makeActive();
-        mMDNSManager.start();
     }
 
     public void stopDiscovery() {
         Log.e("DiscoveryManager", "stopDiscovery()");
         mDesiredState = DesiredState.INACTIVE;
         makeInactive();
-        mMDNSManager.shutdown();
     }
 
     private void makeActive() {

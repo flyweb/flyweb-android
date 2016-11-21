@@ -110,16 +110,25 @@ public class MDNSCache extends WorkerThread {
     }
 
     public void addListener(final Listener listener) {
+        synchronized (mListeners) {
+            mListeners.add(listener);
+        }
+
         // Immediately call onFound for all known services.
         addRunnable(new Runnable() {
             @Override
             public void run() {
-                mListeners.add(listener);
                 for (DNSServiceInfo.Key key : mKnownServices.keySet()) {
                     listener.onDNSServiceFound(mKnownServices.get(key));
                 }
             }
         });
+    }
+
+    public void removeListener(final Listener listener) {
+        synchronized (mListeners) {
+            mListeners.remove(listener);
+        }
     }
 
     @Override
@@ -250,7 +259,6 @@ public class MDNSCache extends WorkerThread {
     }
 
     private void updateServiceInfo() {
-        /*
         Log.d("MDNSCache", "updateServiceInfo()");
         for (Map.Entry<Key, Map<Key, CachedRecord>> entry : mPTRRecords.entrySet()) {
             Log.d("MDNSCache", "PTR " + entry.getKey().toString() + " {");
@@ -259,7 +267,6 @@ public class MDNSCache extends WorkerThread {
             }
             Log.d("MDNSCache", "}");
         }
-        */
 
         List<DNSServiceInfo> foundServices = new ArrayList<>();
         List<DNSServiceInfo> lostServices = new ArrayList<>();
@@ -276,17 +283,19 @@ public class MDNSCache extends WorkerThread {
             Log.d("MDNSCache", "Changed service: " + changed.first.getKey().toString());
         }
 
-        for (Listener listener : mListeners) {
-            Log.d("MDNSCache", "Calling listener: " + listener);
-            for (DNSServiceInfo lostService : lostServices) {
-                listener.onDNSServiceLost(lostService);
-            }
-            for (Pair<DNSServiceInfo, DNSServiceInfo> changedService : changedServices) {
-                listener.onDNSServiceChanged(changedService.first,
-                                             changedService.second);
-            }
-            for (DNSServiceInfo foundService : foundServices) {
-                listener.onDNSServiceFound(foundService);
+        synchronized (mListeners) {
+            for (Listener listener : mListeners) {
+                Log.d("MDNSCache", "Calling listener: " + listener);
+                for (DNSServiceInfo lostService : lostServices) {
+                    listener.onDNSServiceLost(lostService);
+                }
+                for (Pair<DNSServiceInfo, DNSServiceInfo> changedService : changedServices) {
+                    listener.onDNSServiceChanged(changedService.first,
+                            changedService.second);
+                }
+                for (DNSServiceInfo foundService : foundServices) {
+                    listener.onDNSServiceFound(foundService);
+                }
             }
         }
     }

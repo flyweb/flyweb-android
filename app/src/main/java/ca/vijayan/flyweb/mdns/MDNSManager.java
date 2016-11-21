@@ -1,6 +1,9 @@
 package ca.vijayan.flyweb.mdns;
 
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
+import android.util.Pair;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -13,6 +16,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import ca.vijayan.flyweb.DiscoverActivity;
 
 /**
  * Created by kvijayan on 08/11/16.
@@ -35,8 +40,11 @@ public class MDNSManager implements MDNSCache.Listener {
     MDNSCache mCache;
     MulticastSocket mPassiveSocket;
     DatagramSocket mQuerySocket;
+    Handler mServiceInfoHandler;
 
-    public MDNSManager() throws IOException {
+    public MDNSManager(Handler serviceInfoHandler) throws IOException {
+        mServiceInfoHandler = serviceInfoHandler;
+
         mPassiveSocket = new MulticastSocket(MDNS_PORT);
         mPassiveSocket.joinGroup(getMDNSAddress());
         mQuerySocket = new DatagramSocket();
@@ -54,6 +62,7 @@ public class MDNSManager implements MDNSCache.Listener {
     }
 
     synchronized public void shutdown() {
+        mCache.removeListener(this);
         mCache.shutdown();
         mPassiveThread.shutdown();
         mQueryThread.shutdown();
@@ -64,23 +73,27 @@ public class MDNSManager implements MDNSCache.Listener {
     // Listener methods for service events
     @Override
     public void onDNSServiceFound(DNSServiceInfo info) {
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "onDNSServiceFound: " + info.toString());
-        Log.e("MDNSManager", "============================================");
+        Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
+        Log.d("MDNSManager", "onDNSServiceFound: " + info.toString());
+        Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
+        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_ADD_SERVICE,
+                info.clone());
+        m.sendToTarget();
     }
     @Override
     public void onDNSServiceLost(DNSServiceInfo info) {
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "onDNSServiceLost: " + info.toString());
-        Log.e("MDNSManager", "============================================");
+        Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
+        Log.d("MDNSManager", "onDNSServiceLost: " + info.toString());
+        Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
+        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_REMOVE_SERVICE,
+                info.clone());
+        m.sendToTarget();
     }
     @Override
     public void onDNSServiceChanged(DNSServiceInfo info, DNSServiceInfo oldInfo) {
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "////////////////////////////////////////////");
-        Log.e("MDNSManager", "onDNSServiceChanged: " + info.toString());
-        Log.e("MDNSManager", "============================================");
+        Log.d("MDNSManager", "onDNSServiceChanged: HEREHEREHERE!!!!!!!!");
+        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_UPDATE_SERVICE,
+                new Pair<DNSServiceInfo, DNSServiceInfo>(info.clone(), oldInfo.clone()));
+        m.sendToTarget();
     }
 }

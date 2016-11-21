@@ -20,32 +20,43 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ca.vijayan.flyweb.mdns.DNSServiceInfo;
+
 /**
  * Created by kvijayan on 04/11/16.
  */
 
 public class DiscoverListAdapter implements ListAdapter {
     Activity mContext;
-    List<NsdServiceInfo> mServiceList = new ArrayList<NsdServiceInfo>();
+    List<DNSServiceInfo.Key> mServiceList = new ArrayList<DNSServiceInfo.Key>();
     Set<DataSetObserver> mObservers = new HashSet<DataSetObserver>();
 
     DiscoverListAdapter(Activity context) {
         mContext = context;
     }
 
-    void addServiceInfo(NsdServiceInfo info) {
-        if (mServiceList.contains(info)) {
+    void addServiceInfo(DNSServiceInfo info) {
+        if (mServiceList.contains(info.getKey())) {
             return;
         }
-        mServiceList.add(info);
+        mServiceList.add(info.getKey());
         notifyObservers();
     }
 
-    void removeServiceInfo(NsdServiceInfo info) {
-        if (!mServiceList.contains(info)) {
+    void removeServiceInfo(DNSServiceInfo info) {
+        if (!mServiceList.contains(info.getKey())) {
             return;
         }
-        mServiceList.remove(info);
+        mServiceList.remove(info.getKey());
+        notifyObservers();
+    }
+
+    void updateServiceInfo(DNSServiceInfo info, DNSServiceInfo newInfo) {
+        int index = mServiceList.indexOf(info.getKey());
+        if (index < 0) {
+            return;
+        }
+        mServiceList.set(index, info.getKey());
         notifyObservers();
     }
 
@@ -109,10 +120,10 @@ public class DiscoverListAdapter implements ListAdapter {
         TextView nameView = (TextView) itemView.findViewById(R.id.discover_list_item_name);
         TextView descrView = (TextView) itemView.findViewById(R.id.discover_list_item_description);
 
-        NsdServiceInfo serviceInfo = mServiceList.get(i);
+        DNSServiceInfo serviceInfo = mServiceList.get(i).getServiceInfo();
         Map<String, byte[]> attrs = serviceInfo.getAttributes();
 
-        String serviceName = serviceInfo.getServiceName();
+        String serviceName = serviceInfo.displayName();
         String serviceDescr = null;
         if (attrs.containsKey("descr")) {
             try {

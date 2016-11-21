@@ -1,8 +1,15 @@
 package ca.vijayan.flyweb.mdns;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.io.UnsupportedEncodingException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +17,7 @@ import java.util.Map;
  * Created by Kannan Vijayan on 11/18/2016.
  */
 
-public class DNSServiceInfo {
+public class DNSServiceInfo implements Parcelable {
     List<String> mType;
     List<String> mName;
     Map<String, byte[]> mAttributes;
@@ -48,6 +55,14 @@ public class DNSServiceInfo {
     }
     public Key getKey() {
         return mKey;
+    }
+
+    public String displayName() {
+        if (mName.isEmpty()) {
+            return "<EMPTY>";
+        } else {
+            return mName.get(0);
+        }
     }
 
     public DNSServiceInfo clone() {
@@ -106,6 +121,62 @@ public class DNSServiceInfo {
 
         return builder.toString();
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeStringList(mType);
+        parcel.writeStringList(mName);
+        parcel.writeInt(mAttributes.size());
+        for (Map.Entry<String, byte[]> entry : mAttributes.entrySet()) {
+            parcel.writeString(entry.getKey());
+            parcel.writeInt(entry.getValue().length);
+            parcel.writeByteArray(entry.getValue());
+        }
+        assert (mAddress instanceof Inet4Address);
+        parcel.writeByteArray(((Inet4Address) mAddress).getAddress());
+        parcel.writeInt(mPort);
+    }
+
+    public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {
+        public DNSServiceInfo createFromParcel(Parcel in) {
+            List<String> type = new ArrayList<>();
+            in.readStringList(type);
+
+            List<String> name = new ArrayList<>();
+            in.readStringList(name);
+
+            Map<String, byte[]> attrs = new HashMap<>();
+            int numAttrs = in.readInt();
+            for (int i = 0; i < numAttrs; i++) {
+                String attrname = in.readString();
+                byte[] attrbytes = new byte[in.readInt()];
+                in.readByteArray(attrbytes);
+                attrs.put(attrname, attrbytes);
+            }
+
+            byte[] addrBytes = new byte[4];
+            in.readByteArray(addrBytes);
+            InetAddress addr;
+            try {
+                addr = Inet4Address.getByAddress(addrBytes);
+            } catch (UnknownHostException exc) {
+                throw new RuntimeException("Unexpected UNKNOWN HOST Exception.", exc);
+            }
+
+            int port = in.readInt();
+
+            return new DNSServiceInfo(type, name, attrs, addr, port);
+        }
+
+        public DNSServiceInfo[] newArray(int size) {
+            return new DNSServiceInfo[size];
+        }
+    };
 
     public static class Key {
         DNSServiceInfo mServiceInfo;

@@ -11,6 +11,8 @@ import android.webkit.WebViewClient;
 
 import java.net.InetAddress;
 
+import ca.vijayan.flyweb.mdns.DNSServiceInfo;
+
 public class BrowseActivity extends Activity {
 
     WebView mWebView;
@@ -21,10 +23,10 @@ public class BrowseActivity extends Activity {
         setContentView(R.layout.activity_browse);
 
         Intent intent = getIntent();
-        NsdServiceInfo serviceInfo =
+        DNSServiceInfo serviceInfo =
                 intent.getParcelableExtra(DiscoverActivity.EXTRA_SERVICE_INFO);
 
-        InetAddress addr = serviceInfo.getHost();
+        InetAddress addr = serviceInfo.getAddress();
         int port = serviceInfo.getPort();
 
         String url = "http://" + addr.getHostAddress();
