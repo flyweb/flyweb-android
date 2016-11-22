@@ -2,7 +2,6 @@ package ca.vijayan.flyweb;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -13,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 
 import java.io.IOException;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
@@ -76,5 +74,12 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
             return true;
         }
         return false;
+    }
+
+    public void onTestButtonClick(View target) {
+        Intent intent = new Intent(this, BrowseActivity.class);
+        DNSServiceInfo serviceInfo = new DNSServiceInfo("fly://yahoo.com");
+        intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
+        startActivity(intent);
     }
 }
