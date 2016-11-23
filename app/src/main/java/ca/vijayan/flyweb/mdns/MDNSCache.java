@@ -3,12 +3,10 @@ package ca.vijayan.flyweb.mdns;
 import android.util.Log;
 import android.util.Pair;
 
-import java.io.ByteArrayOutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;

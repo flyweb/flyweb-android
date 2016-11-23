@@ -3,7 +3,6 @@ package ca.vijayan.flyweb.mdns;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -74,6 +73,10 @@ public class DNSServiceInfo implements Parcelable {
     }
 
     public String displayName() {
+        if (mTestURL != null) {
+            return mTestURL;
+        }
+
         if (mName.isEmpty()) {
             return "<EMPTY>";
         } else {

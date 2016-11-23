@@ -7,9 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by Kannan Vijayan on 11/16/2016.

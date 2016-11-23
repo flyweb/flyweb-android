@@ -78,7 +78,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
     public void onTestButtonClick(View target) {
         Intent intent = new Intent(this, BrowseActivity.class);
-        DNSServiceInfo serviceInfo = new DNSServiceInfo("fly://yahoo.com");
+        DNSServiceInfo serviceInfo = new DNSServiceInfo("http://yahoo.com");
         intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
         startActivity(intent);
     }

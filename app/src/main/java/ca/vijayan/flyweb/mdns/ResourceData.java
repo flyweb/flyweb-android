@@ -1,12 +1,9 @@
 package ca.vijayan.flyweb.mdns;
 
 import android.os.Parcel;
-import android.os.Parcelable;
-import android.util.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;

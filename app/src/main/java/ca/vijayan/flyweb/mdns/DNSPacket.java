@@ -1,12 +1,7 @@
 package ca.vijayan.flyweb.mdns;
 
-import android.util.Log;
-
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
