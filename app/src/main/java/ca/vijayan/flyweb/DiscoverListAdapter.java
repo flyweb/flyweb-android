@@ -3,14 +3,24 @@ package ca.vijayan.flyweb;
 import android.app.Activity;
 import android.content.Context;
 import android.database.DataSetObserver;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.Image;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.TextView;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -114,27 +124,45 @@ public class DiscoverListAdapter implements ListAdapter {
             itemView = (ViewGroup) view;
         }
         LinearLayout paneView = (LinearLayout) itemView.findViewById(R.id.discover_list_item);
+        final ImageView iconView = (ImageView) itemView.findViewById(R.id.discover_list_item_icon);
         TextView nameView = (TextView) itemView.findViewById(R.id.discover_list_item_name);
-        TextView descrView = (TextView) itemView.findViewById(R.id.discover_list_item_description);
 
         DNSServiceInfo serviceInfo = mServiceList.get(i).getServiceInfo();
         Map<String, byte[]> attrs = serviceInfo.getAttributes();
 
         String serviceName = serviceInfo.displayName();
-        String serviceDescr = null;
-        if (attrs.containsKey("descr")) {
+        if (attrs.containsKey("icon")) {
             try {
-                serviceDescr = new String(attrs.get("descr"), "UTF-8");
-            } catch (UnsupportedEncodingException exc) {
+                String iconPath = new String(attrs.get("icon"), "UTF-8");
+                final URL iconUrl = new URL(serviceInfo.getURL() + iconPath);
+                final Handler setIconHandler = new Handler(new Handler.Callback() {
+                    @Override
+                    public boolean handleMessage(Message message) {
+                        Bitmap bmp = (Bitmap) message.obj;
+                        iconView.setImageBitmap(bmp);
+                        return true;
+                    }
+                });
+
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Bitmap bmp = BitmapFactory.decodeStream(iconUrl.openConnection().getInputStream());
+                            Message m = setIconHandler.obtainMessage(0, bmp);
+                            m.sendToTarget();
+                        } catch (Exception exc) {
+                            Log.e("DiscoverListAdapter", "Exception getting icon", exc);
+                        }
+                    }
+                });
+            } catch (Exception exc) {
                 // Ignore serviceDescr.
+                Log.e("DiscoverListAdapter", "Exception getting icon", exc);
             }
         }
 
-        if (serviceDescr == null) {
-            serviceDescr = "";
-        }
         nameView.setText(serviceName);
-        descrView.setText(serviceDescr);
 
         paneView.setTag(serviceInfo);
 

@@ -84,6 +84,14 @@ public class DNSServiceInfo implements Parcelable {
         }
     }
 
+    public String getURL() {
+        if (mTestURL != null) {
+            return mTestURL;
+        } else {
+            return "http://" + mAddress.getHostAddress() + ":" + mPort + "/";
+        }
+    }
+
     public DNSServiceInfo clone() {
         return new DNSServiceInfo(mType, mName, mAttributes, mAddress, mPort);
     }
