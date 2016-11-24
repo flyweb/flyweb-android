@@ -60,12 +60,12 @@ public class BrowseActivity extends Activity {
         }
     }
 
-    public void onBackButtonClicked(View view) {
-        if (mWebView.canGoBack()) {
-            mWebView.goBack();
-        } else {
-            super.onBackPressed();
-            finish();
-        }
+    public void onHamburgerButtonClicked(View view) {
+        super.onBackPressed();
+        finish();
+    }
+
+    public void onReloadButtonClicked(View view) {
+        mWebView.reload();
     }
 }

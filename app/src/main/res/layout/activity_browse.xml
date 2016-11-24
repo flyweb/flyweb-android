@@ -17,16 +17,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
+
         <ImageButton
             android:padding="5sp"
-            android:layout_width="64sp"
-            android:layout_height="64sp"
+            android:layout_width="40sp"
+            android:layout_height="40sp"
             android:layout_weight="0"
             android:scaleType="fitCenter"
             android:layout_marginRight="5sp"
             android:background="@null"
-            android:src="@drawable/back_large"
-            android:onClick="onBackButtonClicked" />
+            android:src="@drawable/hamburger_menu"
+            android:onClick="onHamburgerButtonClicked" />
 
         <TextView
             android:id="@+id/browse_title"
@@ -34,7 +35,18 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:textSize="12pt" />
+            android:textSize="10pt" />
+
+        <ImageButton
+            android:padding="5sp"
+            android:layout_width="40sp"
+            android:layout_height="40sp"
+            android:layout_weight="0"
+            android:scaleType="fitCenter"
+            android:layout_marginRight="5sp"
+            android:background="@null"
+            android:src="@drawable/reload_icon"
+            android:onClick="onReloadButtonClicked" />
     </LinearLayout>
 
 </LinearLayout>
