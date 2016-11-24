@@ -28,6 +28,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     DiscoverListAdapter mDiscoverListAdapter;
     MDNSManager mMDNSManager;
 
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_discover);
@@ -45,6 +46,18 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
         ViewGroup layout = (ViewGroup) findViewById(R.id.activity_discover);
         ListView discoverListView = (ListView) layout.findViewById(R.id.discover_list);
         discoverListView.setAdapter(mDiscoverListAdapter);
+    }
+
+    @Override
+    protected void onPause() {
+        mMDNSManager.pause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        mMDNSManager.unpause();
+        super.onResume();
     }
 
     public void onItemSelected(View target) {

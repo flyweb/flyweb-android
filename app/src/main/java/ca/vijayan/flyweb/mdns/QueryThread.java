@@ -21,9 +21,14 @@ public class QueryThread extends Thread {
     Queue<QuestionRecord> mQueue;
     MDNSCache mCache;
     boolean mStop;
+    boolean mPaused;
     Date mLastQueryTime;
 
-    private static final int RECV_TIMEOUT = 1000;
+    private static final int RECV_TIMEOUT = 100;
+
+    public static String logName() {
+        return "QueryThread";
+    }
 
     public QueryThread(DatagramSocket socket, MDNSCache cache)
         throws IOException
@@ -34,6 +39,7 @@ public class QueryThread extends Thread {
         mQueue = new ConcurrentLinkedQueue<>();
         mCache = cache;
         mStop = false;
+        mPaused = false;
         mLastQueryTime = null;
     }
 
@@ -54,7 +60,21 @@ public class QueryThread extends Thread {
         }
     }
 
-    private static final int POLL_WAIT = 1000;
+    public void pause() {
+        Log.d(logName(), "Requesting pause.");
+        synchronized (this) {
+            mPaused = true;
+        }
+    }
+
+    public void unpause() {
+        Log.d(logName(), "Requesting unpause.");
+        synchronized (this) {
+            mPaused = false;
+            notify();
+        }
+    }
+
     private static final int ISSUE_QUERY_INTERVAL = 5000;
 
     @Override
@@ -67,6 +87,18 @@ public class QueryThread extends Thread {
             synchronized (this) {
                 if (mStop) {
                     break;
+                }
+
+                // wait on thread if paused.
+                while (mPaused) {
+                    Log.d(logName(), "Paused.");
+                    try {
+                        wait();
+                    } catch (InterruptedException exc) {
+                        if (!mPaused) {
+                            Log.d(logName(), "Unpaused.");
+                        }
+                    }
                 }
             }
 
@@ -99,7 +131,7 @@ public class QueryThread extends Thread {
     }
 
     private void query(QuestionRecord question) {
-        Log.e("QueryThread", "query: " + question.toString());
+        Log.e(logName(), "query: " + question.toString());
         DNSPacket.Flags flags = new DNSPacket.Flags();
         flags.setQR(DNSPacket.QR_CODE_QUERY);
 
@@ -111,7 +143,7 @@ public class QueryThread extends Thread {
         try {
             packetData = dnsPacket.encodePacket();
         } catch (IOException exc) {
-            Log.e("QueryThread", "query: Failed to encode question packet", exc);
+            Log.e(logName(), "query: Failed to encode question packet", exc);
             return;
         }
 
@@ -121,7 +153,7 @@ public class QueryThread extends Thread {
         try {
             mSocket.send(packet);
         } catch (IOException exc) {
-            Log.e("QueryThread", "query: Failed to send packet", exc);
+            Log.e(logName(), "query: Failed to send packet", exc);
             return;
         }
     }
@@ -131,11 +163,9 @@ public class QueryThread extends Thread {
         try {
             mSocket.receive(packet);
         } catch (SocketTimeoutException timeoutExc) {
-            // Timed out listening for incoming packets.
-            Log.d("QueryThread", "receive: Timed out waiting for packets.");
             return;
         } catch (IOException exc) {
-            Log.e("QueryThread", "receive: Failed to receive packet", exc);
+            Log.e(logName(), "receive: Failed to receive packet", exc);
             return;
         }
 
@@ -144,7 +174,7 @@ public class QueryThread extends Thread {
         try {
             dnsPacket.parsePacket(packetData);
         } catch (IOException exc) {
-            Log.e("QueryThread", "Error parsing DNS packet", exc);
+            Log.e(logName(), "Error parsing DNS packet", exc);
             return;
         }
 

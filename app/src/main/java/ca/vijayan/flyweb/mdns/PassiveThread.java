@@ -5,6 +5,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
+import java.net.SocketTimeoutException;
 import java.util.Arrays;
 
 /**
@@ -15,12 +16,23 @@ public class PassiveThread extends Thread {
     private MulticastSocket mPassiveSocket;
     private MDNSCache mCache;
     private boolean mStop;
+    private boolean mPaused;
 
-    public PassiveThread(MulticastSocket socket, MDNSCache cache) {
+    private static final int RECV_TIMEOUT = 100;
+
+    public static final String logName() {
+        return "PassiveThread";
+    }
+
+    public PassiveThread(MulticastSocket socket, MDNSCache cache)
+            throws IOException
+    {
         super();
         mPassiveSocket = socket;
+        mPassiveSocket.setSoTimeout(RECV_TIMEOUT);
         mCache = cache;
         mStop = false;
+        mPaused = false;
     }
 
     // NOTE: This will always be called from a separate thread.
@@ -39,6 +51,20 @@ public class PassiveThread extends Thread {
         }
     }
 
+    public void pause() {
+        Log.d(logName(), "Requesting pause.");
+        synchronized (this) {
+            mPaused = true;
+        }
+    }
+    public void unpause() {
+        Log.d(logName(), "Requesting unpause.");
+        synchronized (this) {
+            mPaused = false;
+            notify();
+        }
+    }
+
     @Override
     public void run() {
         for (;;) {
@@ -47,17 +73,21 @@ public class PassiveThread extends Thread {
                 if (mStop) {
                     break;
                 }
-            }
 
-            // passiveReceive();
-
-            synchronized (this) {
-                try {
-                    this.wait(1000);
-                } catch (InterruptedException exc) {
-                    // Pass.
+                // wait on thread if paused.
+                while (mPaused) {
+                    Log.d(logName(), "Paused.");
+                    try {
+                        wait();
+                    } catch (InterruptedException exc) {
+                        if (!mPaused) {
+                            Log.d(logName(), "Unpaused.");
+                        }
+                        continue;
+                    }
                 }
             }
+            passiveReceive();
         }
     }
 
@@ -65,8 +95,10 @@ public class PassiveThread extends Thread {
         DatagramPacket packet = new DatagramPacket(new byte[4096], 4096);
         try {
             mPassiveSocket.receive(packet);
+        } catch (SocketTimeoutException exc) {
+            return;
         } catch (IOException exc) {
-            Log.e("PassiveThread", "poll: Failed to receive passive packet", exc);
+            Log.e(logName(), "poll: Failed to receive passive packet", exc);
             return;
         }
 
@@ -75,7 +107,7 @@ public class PassiveThread extends Thread {
         try {
             dnsPacket.parsePacket(packetData);
         } catch (IOException exc) {
-            Log.e("PassiveThread", "Error parsing DNS packet", exc);
+            Log.e(logName(), "Error parsing DNS packet", exc);
             return;
         }
 

@@ -56,6 +56,18 @@ public class MDNSManager implements MDNSCache.Listener {
         mPassiveThread.start();
     }
 
+    public void pause() {
+        mQueryThread.pause();
+        mPassiveThread.pause();
+        mCache.pause();
+    }
+
+    public void unpause() {
+        mCache.unpause();
+        mPassiveThread.unpause();
+        mQueryThread.unpause();
+    }
+
     synchronized public void shutdown() {
         mCache.removeListener(this);
         mCache.shutdown();

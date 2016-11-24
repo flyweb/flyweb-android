@@ -20,6 +20,10 @@ import java.util.Set;
  */
 
 public class MDNSCache extends WorkerThread {
+    public static String logName() {
+        return "MDNSCache";
+    }
+
     static class CachedRecord {
         Date mTimeAdded;
         ResourceRecord mRecord;
@@ -97,6 +101,10 @@ public class MDNSCache extends WorkerThread {
     Map<DNSServiceInfo.Key, DNSServiceInfo> mKnownServices;
     Set<Listener> mListeners;
 
+    private static final int ACTIVE_CHECK_EXPIRED_RECORDS_INTERVAL = 100;
+    private static final int PAUSED_CHECK_EXPIRED_RECORDS_INTERVAL = 5000;
+    private int mCheckExpiredRecordsInterval;
+
     public MDNSCache() {
         super("MDNSCache");
         mPTRRecords = new HashMap<>();
@@ -105,6 +113,7 @@ public class MDNSCache extends WorkerThread {
         mARecords = new HashMap<>();
         mKnownServices = new HashMap<>();
         mListeners = new HashSet<>();
+        mCheckExpiredRecordsInterval = ACTIVE_CHECK_EXPIRED_RECORDS_INTERVAL;
     }
 
     public void addListener(final Listener listener) {
@@ -126,6 +135,19 @@ public class MDNSCache extends WorkerThread {
     public void removeListener(final Listener listener) {
         synchronized (mListeners) {
             mListeners.remove(listener);
+        }
+    }
+
+    public void pause() {
+        // Cancel any set timeouts.
+        synchronized (this) {
+            mCheckExpiredRecordsInterval = PAUSED_CHECK_EXPIRED_RECORDS_INTERVAL;
+        }
+    }
+    public void unpause() {
+        // Resume execution.
+        synchronized (this) {
+            mCheckExpiredRecordsInterval = ACTIVE_CHECK_EXPIRED_RECORDS_INTERVAL;
         }
     }
 
@@ -198,18 +220,19 @@ public class MDNSCache extends WorkerThread {
         }
     }
 
-    private static final int CHECK_EXPIRED_RECORDS_INTERVAL = 100;
     private void setRemoveExpiredRecordsTimeout() {
-        setTimeout(CHECK_EXPIRED_RECORDS_INTERVAL, new Runnable() {
+        int interval;
+        synchronized (this) {
+            interval = mCheckExpiredRecordsInterval;
+        }
+        setTimeout(interval, new Runnable() {
             @Override
             public void run() {
-                doRemoveExpiredRecordsAndReschedule();
+                Log.d(logName(), "Checking for expired records.");
+                removeExpiredRecords();
+                setRemoveExpiredRecordsTimeout();
             }
         });
-    }
-    private void doRemoveExpiredRecordsAndReschedule() {
-        removeExpiredRecords();
-        setRemoveExpiredRecordsTimeout();
     }
 
     public void removeExpiredRecords() {

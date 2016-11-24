@@ -73,11 +73,17 @@ public abstract class WorkerThread extends Thread {
             }
         }
     }
+    public interface TimeoutHandler {
+        void handleTimeout(long timeoutId);
+    }
 
     public long setTimeout(int ms, Runnable runnable) {
         long nowms = (new Date()).getTime();
         Date when = new Date(nowms + ms);
-        long id = ++mNextTimeoutId;
+        long id;
+        synchronized (this) {
+            id = ++mNextTimeoutId;
+        }
         TimeoutEntry entry = new TimeoutEntry(this, id, when, runnable);
         synchronized (mTimeouts) {
             mTimeouts.add(entry);
@@ -89,8 +95,8 @@ public abstract class WorkerThread extends Thread {
     }
 
     public boolean clearTimeout(long id) {
-        TimeoutEntry toClear = null;
         synchronized (mTimeouts) {
+            TimeoutEntry toClear = null;
             for (TimeoutEntry entry : mTimeouts) {
                 if (entry.mId == id) {
                     toClear = entry;
@@ -153,10 +159,14 @@ public abstract class WorkerThread extends Thread {
             }
 
             // Execute all triggered timeouts.
+            List<TimeoutEntry> nextTimeouts = new ArrayList<>();
             synchronized (mTimeouts) {
                 while (!mTimeouts.isEmpty() && mTimeouts.peek().isTriggered()) {
-                    mTimeouts.poll().run();
+                    nextTimeouts.add(mTimeouts.poll());
                 }
+            }
+            for (TimeoutEntry entry : nextTimeouts) {
+                entry.run();
             }
 
             // Drain the queue.
