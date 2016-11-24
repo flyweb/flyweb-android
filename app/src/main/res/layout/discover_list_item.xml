@@ -25,7 +25,7 @@
         android:layout_marginLeft="10sp"
         android:padding="5sp"
         android:scaleType="fitCenter"
-        android:src="@drawable/logo_flyweb_white" />
+        android:src="@drawable/blank_64x64" />
 
     <TextView
         android:id="@+id/discover_list_item_name"
