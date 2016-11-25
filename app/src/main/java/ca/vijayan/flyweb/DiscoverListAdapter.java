@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,8 @@ import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 
 public class DiscoverListAdapter implements ListAdapter {
     Activity mContext;
-    List<DNSServiceInfo.Key> mServiceList = new ArrayList<DNSServiceInfo.Key>();
+    ArrayList<DNSServiceInfo.Key> mServiceList = new ArrayList<DNSServiceInfo.Key>();
+    Map<DNSServiceInfo, Bitmap> mIconMap = new HashMap<>();
     Set<DataSetObserver> mObservers = new HashSet<DataSetObserver>();
 
     DiscoverListAdapter(Activity context) {
@@ -47,7 +49,22 @@ public class DiscoverListAdapter implements ListAdapter {
         if (mServiceList.contains(info.getKey())) {
             return;
         }
-        mServiceList.add(info.getKey());
+        if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE)) {
+            // Sort _flyweb._tcp services first.
+            boolean added =false;
+            for (int i = 0; i < mServiceList.size(); i++) {
+                DNSServiceInfo iInfo = mServiceList.get(i).getServiceInfo();
+                if (iInfo.getType().equals(DNSPacket.HTTP_SERVICE_TYPE)) {
+                    mServiceList.add(i, info.getKey());
+                    added = true;
+                }
+            }
+            if (!added) {
+                mServiceList.add(info.getKey());
+            }
+        } else {
+            mServiceList.add(info.getKey());
+        }
         notifyObservers();
     }
 
@@ -130,14 +147,19 @@ public class DiscoverListAdapter implements ListAdapter {
 
         DNSServiceInfo serviceInfo = mServiceList.get(i).getServiceInfo();
         String serviceName = serviceInfo.displayName();
-
-        Map<String, byte[]> attrs = serviceInfo.getAttributes();
-        if (serviceInfo.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE)) {
+        Bitmap iconBitmap = mIconMap.get(serviceInfo);
+        if (iconBitmap != null) {
+            // We have found an icon for this service.
+            iconView.setImageBitmap(iconBitmap);
+        } else if (serviceInfo.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE)) {
+            // Haven't found an icon, and it's a flyweb service.
+            // If it has an 'icon' attribute, try to look it up.
+            Map<String, byte[]> attrs = serviceInfo.getAttributes();
             if (attrs.containsKey("icon")) {
                 try {
                     String iconPath = new String(attrs.get("icon"), "UTF-8");
                     URL iconUrl = new URL(serviceInfo.getBaseURL() + "/" + iconPath);
-                    retreiveAndSetIcon(iconView, iconUrl);
+                    retreiveAndSetIcon(serviceInfo, iconUrl);
                 } catch (Exception exc) {
                     // Ignore serviceDescr.
                     Log.e("DiscoverListAdapter", "Exception getting icon URL.", exc);
@@ -151,12 +173,13 @@ public class DiscoverListAdapter implements ListAdapter {
         return itemView;
     }
 
-    private void retreiveAndSetIcon(final ImageView iconView, final URL iconUrl) {
+    private void retreiveAndSetIcon(final DNSServiceInfo serviceInfo, final URL iconUrl) {
         final Handler setIconHandler = new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message message) {
                 Bitmap bmp = (Bitmap) message.obj;
-                iconView.setImageBitmap(bmp);
+                mIconMap.put(serviceInfo, bmp);
+                notifyObservers();
                 return true;
             }
         });
