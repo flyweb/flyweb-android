@@ -83,8 +83,8 @@ public class MDNSManager implements MDNSCache.Listener {
         Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceFound: " + info.toString());
         Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
-        if (info.getType().equals(DNSPacket.dottedToName("_http._tcp.local")) ||
-            info.getType().equals(DNSPacket.dottedToName("_flyweb._tcp.local")))
+        if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
+            info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
             Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_ADD_SERVICE,
                     info.clone());
@@ -96,8 +96,8 @@ public class MDNSManager implements MDNSCache.Listener {
         Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceLost: " + info.toString());
         Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
-        if (info.getType().equals(DNSPacket.dottedToName("_http._tcp.local")) ||
-            info.getType().equals(DNSPacket.dottedToName("_flyweb._tcp.local")))
+        if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
+            info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
             Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_REMOVE_SERVICE,
                     info.clone());
@@ -107,8 +107,8 @@ public class MDNSManager implements MDNSCache.Listener {
     @Override
     public void onDNSServiceChanged(DNSServiceInfo info, DNSServiceInfo oldInfo) {
         Log.d("MDNSManager", "onDNSServiceChanged: HEREHEREHERE!!!!!!!!");
-        if (info.getType().equals(DNSPacket.dottedToName("_http._tcp.local")) ||
-            info.getType().equals(DNSPacket.dottedToName("_flyweb._tcp.local")))
+        if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
+            info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
             Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_UPDATE_SERVICE,
                     new Pair<DNSServiceInfo, DNSServiceInfo>(info.clone(), oldInfo.clone()));

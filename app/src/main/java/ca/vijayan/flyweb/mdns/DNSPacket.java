@@ -348,6 +348,8 @@ public class DNSPacket {
         return builder.toString();
     }
 
+    public static final List<String> FLYWEB_SERVICE_TYPE = dottedToName("_flyweb._tcp.local");
+    public static final List<String> HTTP_SERVICE_TYPE = dottedToName("_http._tcp.local");
 
     Flags mFlags = null;
     List<QuestionRecord> mQuestionRecords = new ArrayList<>();
