@@ -83,24 +83,36 @@ public class MDNSManager implements MDNSCache.Listener {
         Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceFound: " + info.toString());
         Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
-        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_ADD_SERVICE,
-                info.clone());
-        m.sendToTarget();
+        if (info.getType().equals(PacketEncoder.dottedToName("_http._tcp.local")) ||
+            info.getType().equals(PacketEncoder.dottedToName("_flyweb._tcp.local")))
+        {
+            Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_ADD_SERVICE,
+                    info.clone());
+            m.sendToTarget();
+        }
     }
     @Override
     public void onDNSServiceLost(DNSServiceInfo info) {
         Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceLost: " + info.toString());
         Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
-        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_REMOVE_SERVICE,
-                info.clone());
-        m.sendToTarget();
+        if (info.getType().equals(PacketEncoder.dottedToName("_http._tcp.local")) ||
+            info.getType().equals(PacketEncoder.dottedToName("_flyweb._tcp.local")))
+        {
+            Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_REMOVE_SERVICE,
+                    info.clone());
+            m.sendToTarget();
+        }
     }
     @Override
     public void onDNSServiceChanged(DNSServiceInfo info, DNSServiceInfo oldInfo) {
         Log.d("MDNSManager", "onDNSServiceChanged: HEREHEREHERE!!!!!!!!");
-        Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_UPDATE_SERVICE,
-                new Pair<DNSServiceInfo, DNSServiceInfo>(info.clone(), oldInfo.clone()));
-        m.sendToTarget();
+        if (info.getType().equals(PacketEncoder.dottedToName("_http._tcp.local")) ||
+            info.getType().equals(PacketEncoder.dottedToName("_flyweb._tcp.local")))
+        {
+            Message m = mServiceInfoHandler.obtainMessage(DiscoverActivity.MESSAGE_UPDATE_SERVICE,
+                    new Pair<DNSServiceInfo, DNSServiceInfo>(info.clone(), oldInfo.clone()));
+            m.sendToTarget();
+        }
     }
 }

@@ -107,6 +107,7 @@ public class QueryThread extends Thread {
             if ((nowTime.getTime() - mLastQueryTime.getTime()) >= ISSUE_QUERY_INTERVAL) {
                 mLastQueryTime = nowTime;
                 mQueue.add(makeFlyWebQuestion());
+                mQueue.add(makeHttpQuestion());
             }
 
             // Issue any query requests.
@@ -121,6 +122,16 @@ public class QueryThread extends Thread {
     }
 
     private static QuestionRecord makeFlyWebQuestion() {
+        // Create a question for '_flyweb._tcp'.
+        List<String> name = PacketEncoder.dottedToName("_flyweb._tcp.local");
+        return new QuestionRecord(
+                /* name = */ name,
+                /* recordType = */ DNSPacket.RECORD_TYPE_PTR,
+                /* classCode = */ DNSPacket.CLASS_CODE_IN,
+                /* cacheFlush = */ true);
+    }
+
+    private static QuestionRecord makeHttpQuestion() {
         // Create a question for '_flyweb._tcp'.
         List<String> name = PacketEncoder.dottedToName("_http._tcp.local");
         return new QuestionRecord(
