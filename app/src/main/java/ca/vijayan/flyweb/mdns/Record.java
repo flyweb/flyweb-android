@@ -41,7 +41,7 @@ public class Record implements Parcelable {
         return mName;
     }
     public String getDottedNameString() {
-        return PacketParser.nameToDotted(mName);
+        return DNSPacket.nameToDotted(mName);
     }
 
     public int getRecordType() {
@@ -68,7 +68,7 @@ public class Record implements Parcelable {
     protected void encode(PacketEncoder encoder) throws IOException {
         assert (mRecordType <= 0xffff);
         assert (mClassCode <= 0xff);
-        Log.e("Record::encode", "mName = " + PacketParser.nameToDotted(mName));
+        Log.e("Record::encode", "mName = " + DNSPacket.nameToDotted(mName));
         encoder.writeLabel(mName);
         encoder.writeInt16(mRecordType);
         encoder.writeInt16(mClassCode | (mCacheFlush ? 0x8000 : 0x0000));
@@ -95,7 +95,7 @@ public class Record implements Parcelable {
     private void calculateHashCode() {
         ByteArrayOutputStream outs = new ByteArrayOutputStream();
         try {
-            outs.write(PacketParser.nameToDotted(mName).getBytes("UTF-8"));
+            outs.write(DNSPacket.nameToDotted(mName).getBytes("UTF-8"));
             outs.write((mRecordType >> 8) & 0xff);
             outs.write(mRecordType & 0xff);
             outs.write((mClassCode >> 8) & 0xff);

@@ -38,7 +38,7 @@ public class QuestionRecord extends Record implements Parcelable {
 
     @Override
     public String toString() {
-        return "QR{name=" + PacketParser.nameToDotted(mName) + ", rt=" + mRecordType +
+        return "QR{name=" + DNSPacket.nameToDotted(mName) + ", rt=" + mRecordType +
                 ", cc=" + mClassCode + "}";
     }
 

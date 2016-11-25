@@ -127,8 +127,8 @@ public class DNSServiceInfo implements Parcelable {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append("DNSServiceInfo { ");
-        builder.append("type=").append(PacketParser.nameToDotted(mType)).append(", ");
-        builder.append("name=").append(PacketParser.nameToDotted(mName)).append(", ");
+        builder.append("type=").append(DNSPacket.nameToDotted(mType)).append(", ");
+        builder.append("name=").append(DNSPacket.nameToDotted(mName)).append(", ");
         builder.append("addr=").append(mAddress.toString());
         builder.append(":").append(mPort).append("; ");
         boolean first = true;

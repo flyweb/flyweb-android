@@ -20,22 +20,6 @@ public class PacketParser {
         mStream = new ByteArrayInputStream(mData);
     }
 
-    static public String nameToDotted(List<String> name) {
-        assert (!name.isEmpty());
-
-        StringBuilder builder = new StringBuilder();
-
-        Iterator<String> iter = name.iterator();
-        if (iter.hasNext()) {
-            builder.append(iter.next());
-            while (iter.hasNext()) {
-                builder.append(".");
-                builder.append(iter.next());
-            }
-        }
-        return builder.toString();
-    }
-
     InputStream inputStreamAt(int offset) {
         assert (offset <= mData.length);
         return new ByteArrayInputStream(mData, offset, mData.length - offset);

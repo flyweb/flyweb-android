@@ -79,7 +79,7 @@ public abstract class ResourceData {
             return mServiceName;
         }
         public String getDottedServiceNameString() {
-            return PacketParser.nameToDotted(mServiceName);
+            return DNSPacket.nameToDotted(mServiceName);
         }
 
         public void parse(PacketParser recordParser, PacketParser baseParser) throws IOException {
@@ -87,7 +87,7 @@ public abstract class ResourceData {
         }
 
         public String toString() {
-            return "PTR[" + PacketParser.nameToDotted(mServiceName) + "]";
+            return "PTR[" + DNSPacket.nameToDotted(mServiceName) + "]";
         }
 
         @Override
@@ -137,7 +137,7 @@ public abstract class ResourceData {
             return mTarget;
         }
         public String getDottedTargetString() {
-            return PacketParser.nameToDotted(mTarget);
+            return DNSPacket.nameToDotted(mTarget);
         }
 
         public void parse(PacketParser recordParser, PacketParser baseParser) throws IOException {
@@ -148,7 +148,7 @@ public abstract class ResourceData {
         }
 
         public String toString() {
-            return "SRV[" + PacketParser.nameToDotted(mTarget) + ":" + mPort +
+            return "SRV[" + DNSPacket.nameToDotted(mTarget) + ":" + mPort +
                     ", prio=" + mPriority + ", weight=" + mWeight + "]";
         }
 

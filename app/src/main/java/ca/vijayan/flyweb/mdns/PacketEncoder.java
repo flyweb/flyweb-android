@@ -16,17 +16,6 @@ public class PacketEncoder {
         mStream = new ByteArrayOutputStream();
     }
 
-    static public List<String> dottedToName(String dotted) {
-        if (dotted.endsWith(".")) {
-            dotted = dotted.substring(0, dotted.length() - 1);
-        }
-        List<String> result = new ArrayList<String>();
-        for (String str : dotted.split("\\.")) {
-            result.add(str);
-        }
-        return result;
-    }
-
     byte[] getBytes() {
         return mStream.toByteArray();
     }

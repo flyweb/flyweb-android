@@ -96,7 +96,7 @@ public class ResourceRecord extends Record implements Parcelable {
     }
 
     public String toString() {
-        return "RR{name=" + PacketParser.nameToDotted(mName) + ", rt=" + mRecordType +
+        return "RR{name=" + DNSPacket.nameToDotted(mName) + ", rt=" + mRecordType +
                 ", cc=" + mClassCode + ", ttl=" + mTTL +
                 (mResourceData == null ? "" : ", " + mResourceData.toString()) +
                 "}";

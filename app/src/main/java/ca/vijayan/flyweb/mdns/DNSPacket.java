@@ -2,6 +2,7 @@ package ca.vijayan.flyweb.mdns;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -319,6 +320,34 @@ public class DNSPacket {
         AUTHORITY,
         ADDITIONAL
     }
+
+    static public List<String> dottedToName(String dotted) {
+        if (dotted.endsWith(".")) {
+            dotted = dotted.substring(0, dotted.length() - 1);
+        }
+        List<String> result = new ArrayList<String>();
+        for (String str : dotted.split("\\.")) {
+            result.add(str);
+        }
+        return result;
+    }
+
+    static public String nameToDotted(List<String> name) {
+        assert (!name.isEmpty());
+
+        StringBuilder builder = new StringBuilder();
+
+        Iterator<String> iter = name.iterator();
+        if (iter.hasNext()) {
+            builder.append(iter.next());
+            while (iter.hasNext()) {
+                builder.append(".");
+                builder.append(iter.next());
+            }
+        }
+        return builder.toString();
+    }
+
 
     Flags mFlags = null;
     List<QuestionRecord> mQuestionRecords = new ArrayList<>();

@@ -123,7 +123,7 @@ public class QueryThread extends Thread {
 
     private static QuestionRecord makeFlyWebQuestion() {
         // Create a question for '_flyweb._tcp'.
-        List<String> name = PacketEncoder.dottedToName("_flyweb._tcp.local");
+        List<String> name = DNSPacket.dottedToName("_flyweb._tcp.local");
         return new QuestionRecord(
                 /* name = */ name,
                 /* recordType = */ DNSPacket.RECORD_TYPE_PTR,
@@ -133,7 +133,7 @@ public class QueryThread extends Thread {
 
     private static QuestionRecord makeHttpQuestion() {
         // Create a question for '_flyweb._tcp'.
-        List<String> name = PacketEncoder.dottedToName("_http._tcp.local");
+        List<String> name = DNSPacket.dottedToName("_http._tcp.local");
         return new QuestionRecord(
                 /* name = */ name,
                 /* recordType = */ DNSPacket.RECORD_TYPE_PTR,
