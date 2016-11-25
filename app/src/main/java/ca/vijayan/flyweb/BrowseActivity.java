@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.CookieManager;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
@@ -15,8 +16,9 @@ import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 
 public class BrowseActivity extends Activity {
 
-    WebView mWebView;
     DNSServiceInfo mServiceInfo;
+    WebView mWebView;
+    CookieManager mCookieManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +37,18 @@ public class BrowseActivity extends Activity {
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.setWebViewClient(new WebViewClient() {
         });
+        mCookieManager = CookieManager.getInstance();
+        mCookieManager.setAcceptCookie(true);
+        mCookieManager.setAcceptThirdPartyCookies(mWebView, false);
         mWebView.loadUrl(mServiceInfo.getServiceURL());
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Clear the webview cache.
+        mWebView.clearCache(true);
+        mCookieManager.removeAllCookies(null);
+        super.onDestroy();
     }
 
     @Override
