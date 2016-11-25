@@ -136,7 +136,7 @@ public class DiscoverListAdapter implements ListAdapter {
             if (attrs.containsKey("icon")) {
                 try {
                     String iconPath = new String(attrs.get("icon"), "UTF-8");
-                    URL iconUrl = new URL(serviceInfo.getURL() + iconPath);
+                    URL iconUrl = new URL(serviceInfo.getBaseURL() + "/" + iconPath);
                     retreiveAndSetIcon(iconView, iconUrl);
                 } catch (Exception exc) {
                     // Ignore serviceDescr.

@@ -18,18 +18,6 @@ public class BrowseActivity extends Activity {
     WebView mWebView;
     DNSServiceInfo mServiceInfo;
 
-    private String makeServiceBaseUrl() {
-        if (mServiceInfo.getTestURL() != null) {
-            return mServiceInfo.getTestURL();
-        }
-
-        InetAddress addr = mServiceInfo.getAddress();
-        String addrString = addr.getHostAddress();
-        int port = mServiceInfo.getPort();
-
-        return "http://" + addrString + ":" + mServiceInfo.getPort() + "/";
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,7 +35,7 @@ public class BrowseActivity extends Activity {
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.setWebViewClient(new WebViewClient() {
         });
-        mWebView.loadUrl(makeServiceBaseUrl());
+        mWebView.loadUrl(mServiceInfo.getServiceURL());
     }
 
     @Override
