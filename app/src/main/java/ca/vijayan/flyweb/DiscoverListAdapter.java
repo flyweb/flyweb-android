@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ca.vijayan.flyweb.mdns.DNSPacket;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 
 /**
@@ -124,49 +125,54 @@ public class DiscoverListAdapter implements ListAdapter {
             itemView = (ViewGroup) view;
         }
         LinearLayout paneView = (LinearLayout) itemView.findViewById(R.id.discover_list_item);
-        final ImageView iconView = (ImageView) itemView.findViewById(R.id.discover_list_item_icon);
+        ImageView iconView = (ImageView) itemView.findViewById(R.id.discover_list_item_icon);
         TextView nameView = (TextView) itemView.findViewById(R.id.discover_list_item_name);
 
         DNSServiceInfo serviceInfo = mServiceList.get(i).getServiceInfo();
-        Map<String, byte[]> attrs = serviceInfo.getAttributes();
-
         String serviceName = serviceInfo.displayName();
-        if (attrs.containsKey("icon")) {
-            try {
-                String iconPath = new String(attrs.get("icon"), "UTF-8");
-                final URL iconUrl = new URL(serviceInfo.getURL() + iconPath);
-                final Handler setIconHandler = new Handler(new Handler.Callback() {
-                    @Override
-                    public boolean handleMessage(Message message) {
-                        Bitmap bmp = (Bitmap) message.obj;
-                        iconView.setImageBitmap(bmp);
-                        return true;
-                    }
-                });
 
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Bitmap bmp = BitmapFactory.decodeStream(iconUrl.openConnection().getInputStream());
-                            Message m = setIconHandler.obtainMessage(0, bmp);
-                            m.sendToTarget();
-                        } catch (Exception exc) {
-                            Log.e("DiscoverListAdapter", "Exception getting icon", exc);
-                        }
-                    }
-                });
-            } catch (Exception exc) {
-                // Ignore serviceDescr.
-                Log.e("DiscoverListAdapter", "Exception getting icon", exc);
+        Map<String, byte[]> attrs = serviceInfo.getAttributes();
+        if (serviceInfo.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE)) {
+            if (attrs.containsKey("icon")) {
+                try {
+                    String iconPath = new String(attrs.get("icon"), "UTF-8");
+                    URL iconUrl = new URL(serviceInfo.getURL() + iconPath);
+                    retreiveAndSetIcon(iconView, iconUrl);
+                } catch (Exception exc) {
+                    // Ignore serviceDescr.
+                    Log.e("DiscoverListAdapter", "Exception getting icon URL.", exc);
+                }
             }
         }
 
         nameView.setText(serviceName);
-
         paneView.setTag(serviceInfo);
 
         return itemView;
+    }
+
+    private void retreiveAndSetIcon(final ImageView iconView, final URL iconUrl) {
+        final Handler setIconHandler = new Handler(new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message message) {
+                Bitmap bmp = (Bitmap) message.obj;
+                iconView.setImageBitmap(bmp);
+                return true;
+            }
+        });
+
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Bitmap bmp = BitmapFactory.decodeStream(iconUrl.openConnection().getInputStream());
+                    Message m = setIconHandler.obtainMessage(0, bmp);
+                    m.sendToTarget();
+                } catch (Exception exc) {
+                    Log.e("DiscoverListAdapter", "Exception getting icon", exc);
+                }
+            }
+        });
     }
 
     @Override
