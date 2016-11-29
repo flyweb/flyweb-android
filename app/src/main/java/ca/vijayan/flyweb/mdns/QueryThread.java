@@ -75,7 +75,7 @@ public class QueryThread extends Thread {
         }
     }
 
-    private static final int ISSUE_QUERY_INTERVAL = 5000;
+    private static final int ISSUE_QUERY_INTERVAL = 3000;
 
     @Override
     public void run() {
@@ -140,7 +140,6 @@ public class QueryThread extends Thread {
     }
 
     private void query(QuestionRecord question) {
-        Log.e(logName(), "query: " + question.toString());
         DNSPacket.Flags flags = new DNSPacket.Flags();
         flags.setQR(DNSPacket.QR_CODE_QUERY);
 
