@@ -68,7 +68,6 @@ public class Record implements Parcelable {
     protected void encode(PacketEncoder encoder) throws IOException {
         assert (mRecordType <= 0xffff);
         assert (mClassCode <= 0xff);
-        Log.e("Record::encode", "mName = " + DNSPacket.nameToDotted(mName));
         encoder.writeLabel(mName);
         encoder.writeInt16(mRecordType);
         encoder.writeInt16(mClassCode | (mCacheFlush ? 0x8000 : 0x0000));
