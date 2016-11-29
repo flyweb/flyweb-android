@@ -41,6 +41,10 @@ public class DiscoverListAdapter implements ListAdapter {
     Map<DNSServiceInfo, Bitmap> mIconMap = new HashMap<>();
     Set<DataSetObserver> mObservers = new HashSet<DataSetObserver>();
 
+    public static String logName() {
+        return "DiscoverListAdapter";
+    }
+
     DiscoverListAdapter(Activity context) {
         mContext = context;
     }
@@ -51,12 +55,13 @@ public class DiscoverListAdapter implements ListAdapter {
         }
         if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE)) {
             // Sort _flyweb._tcp services first.
-            boolean added =false;
+            boolean added = false;
             for (int i = 0; i < mServiceList.size(); i++) {
                 DNSServiceInfo iInfo = mServiceList.get(i).getServiceInfo();
                 if (iInfo.getType().equals(DNSPacket.HTTP_SERVICE_TYPE)) {
                     mServiceList.add(i, info.getKey());
                     added = true;
+                    break;
                 }
             }
             if (!added) {
@@ -162,9 +167,13 @@ public class DiscoverListAdapter implements ListAdapter {
                     retreiveAndSetIcon(serviceInfo, iconUrl);
                 } catch (Exception exc) {
                     // Ignore serviceDescr.
-                    Log.e("DiscoverListAdapter", "Exception getting icon URL.", exc);
+                    Log.e(logName(), "Exception getting icon URL.", exc);
                 }
             }
+        }
+
+        if (iconBitmap == null) {
+            iconView.setImageResource(R.drawable.blank_64x64);
         }
 
         nameView.setText(serviceName);
@@ -192,7 +201,7 @@ public class DiscoverListAdapter implements ListAdapter {
                     Message m = setIconHandler.obtainMessage(0, bmp);
                     m.sendToTarget();
                 } catch (Exception exc) {
-                    Log.e("DiscoverListAdapter", "Exception getting icon", exc);
+                    Log.e(logName(), "Exception getting icon", exc);
                 }
             }
         });
