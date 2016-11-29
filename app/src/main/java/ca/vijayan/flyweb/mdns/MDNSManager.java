@@ -80,9 +80,7 @@ public class MDNSManager implements MDNSCache.Listener {
     // Listener methods for service events
     @Override
     public void onDNSServiceFound(DNSServiceInfo info) {
-        Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceFound: " + info.toString());
-        Log.d("MDNSManager", "onDNSServiceFound: HEREHEREHERE!!!!!!!!");
         if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
             info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
@@ -93,9 +91,7 @@ public class MDNSManager implements MDNSCache.Listener {
     }
     @Override
     public void onDNSServiceLost(DNSServiceInfo info) {
-        Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
         Log.d("MDNSManager", "onDNSServiceLost: " + info.toString());
-        Log.d("MDNSManager", "onDNSServiceLost: HEREHEREHERE!!!!!!!!");
         if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
             info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
@@ -106,7 +102,6 @@ public class MDNSManager implements MDNSCache.Listener {
     }
     @Override
     public void onDNSServiceChanged(DNSServiceInfo info, DNSServiceInfo oldInfo) {
-        Log.d("MDNSManager", "onDNSServiceChanged: HEREHEREHERE!!!!!!!!");
         if (info.getType().equals(DNSPacket.FLYWEB_SERVICE_TYPE) ||
             info.getType().equals(DNSPacket.HTTP_SERVICE_TYPE))
         {
