@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
@@ -19,6 +20,10 @@ public class BrowseActivity extends Activity {
     DNSServiceInfo mServiceInfo;
     WebView mWebView;
     CookieManager mCookieManager;
+
+    static final String MOBILE_UA =
+        "Mozilla/5.0 (Linux; U; Android 2.2; en-us; Nexus One Build/FRF91) " +
+                "AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1\n";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +39,12 @@ public class BrowseActivity extends Activity {
         titleView.setText(mServiceInfo.displayName());
 
         mWebView = (WebView) group.findViewById(R.id.browse_webview);
-        mWebView.getSettings().setJavaScriptEnabled(true);
+        WebSettings settings = mWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setUserAgentString(MOBILE_UA);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
         mWebView.setWebViewClient(new WebViewClient() {
         });
         mCookieManager = CookieManager.getInstance();
