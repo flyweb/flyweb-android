@@ -9,11 +9,15 @@ import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
 
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
@@ -50,6 +54,18 @@ public class BrowseActivity extends Activity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         mWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                Uri uri = req.getUrl();
+                if (mServiceInfo.getAddress().getHostAddress().equals(uri.getHost()) &&
+                    (mServiceInfo.getPort() == uri.getPort()))
+                {
+                    return false;
+                } else {
+                    view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, req.getUrl()));
+                    return true;
+                }
+            }
         });
         mWebView.setWebChromeClient(new WebChromeClient() {
             @Override
