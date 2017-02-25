@@ -121,6 +121,13 @@ public class ProxyConnection {
         return mServiceRecvBuffer;
     }
 
+    public void writeServiceRecvBuffer(ByteBuffer data) {
+        while (data.remaining() > mServiceRecvBuffer.remaining()) {
+            mServiceRecvBuffer = enlargeBuffer(mServiceRecvBuffer);
+        }
+        mServiceRecvBuffer.put(data);
+    }
+
     public int newLocalSocketKeyOps() {
         // Ignore errored connections.
         if (mLocalState == LocalState.ERRORED) {

@@ -3,31 +3,23 @@ package ca.vijayan.flyweb.proxy;
 import android.util.Log;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.nio.channels.*;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
+import java.util.function.Supplier;
 
 /**
  * Created by Kannan Vijayan on 1/18/2017.
  */
 
 public class ProxyServer implements Runnable {
+    final int NUM_FIXED_THREAD_POOL = 1;
+    final int TIMEOUT_IN_SECONDS = 20;
+
     InetAddress mServiceAddr;
     int mServicePort;
     boolean mIsSecure;
@@ -37,13 +29,16 @@ public class ProxyServer implements Runnable {
     SelectionKey mServerKey;
     boolean mServerStopRequest;
     Set<ProxyConnection> mConnections;
+    ProxyDataHandler mProxyDataHandler;
 
     Thread mThread;
 
-    public ProxyServer(InetAddress serviceAddr, int servicePort, boolean isSecure) throws IOException {
+    public ProxyServer(InetAddress serviceAddr, int servicePort, boolean isSecure, ProxyDataHandler proxyDataHandler)
+            throws IOException {
         mServiceAddr = serviceAddr;
         mServicePort = servicePort;
         mIsSecure = isSecure;
+        mProxyDataHandler = proxyDataHandler;
 
         mSelector = Selector.open();
         mServerSocket = ServerSocketChannel.open();
@@ -216,8 +211,27 @@ public class ProxyServer implements Runnable {
             handleLocalIncomingData(conn, totalRead);
         }
     }
+
     void handleLocalIncomingData(ProxyConnection conn, int nbytes) {
-        // TODO: IMPLEMENT.
+        ByteBuffer buf = conn.getLocalRecvBuffer();
+        byte[] data = new byte[buf.remaining()];
+        buf.get(data);
+        mProxyDataHandler.handleLocalDataReceived(conn, data);
+
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
+
+        CompletableFuture.runAsync(new Runnable() {
+            @Override
+            public void run() {
+                mProxyDataHandler.handleLocalDataReceived(conn, data);
+            }
+        }, executor)
+                .orTimeout(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS)
+                .whenComplete((res, error) -> {
+                    if (error != null) {
+                        Log.e("ProxyServer", "Failed to handle incoming data")
+                    }
+                });
     }
 
     void handleLocalWrite(ProxyConnection conn) {
@@ -244,12 +258,13 @@ public class ProxyServer implements Runnable {
         }
 
         if (totalWritten > 0) {
-            // Handle new local incoming data.
+            // Handle new local outgoing data.
             handleLocalOutgoingData(conn, totalWritten);
         }
     }
+
     void handleLocalOutgoingData(ProxyConnection conn, int nbytes) {
-        // TODO: IMPLEMENT.
+        mProxyDataHandler.handleLocalDataSent(conn, nbytes);
     }
 
     void handleServiceConnect(ProxyConnection conn) {
@@ -266,15 +281,73 @@ public class ProxyServer implements Runnable {
 
     void handleServiceRead(ProxyConnection conn) {
         // Finish connecting to the service.
-        try {
-            conn.getServiceSocket().finishConnect();
-        } catch (IOException exc) {
-            Log.e("ProxyServer", "Failed to write to connect to service.");
-            conn.markServiceSocketError();
-            return;
+        final int BUFFER_SIZE = 1024;
+        ByteBuffer buf = ByteBuffer.allocate(BUFFER_SIZE);
+        int totalRead = 0;
+        for (;;) {
+            int nread = 0;
+            try {
+                nread = conn.getServiceSocket().read(buf);
+            } catch (IOException exc) {
+                Log.e("ProxyServer", "Failed to read from service connection.");
+                conn.markServiceSocketError();
+                break;
+            }
+            if (nread <= 0) {
+                break;
+            }
+            buf.flip();
+            conn.writeServiceRecvBuffer(buf);
+            totalRead += nread;
+            if (nread < BUFFER_SIZE) {
+                break;
+            }
+
+            buf.reset();
         }
-        conn.markServiceSocketConnected();
+
+        if (totalRead > 0) {
+            // Handle new service incoming data.
+            handleServiceIncomingData(conn, totalRead);
+        }
     }
+
+    void handleServiceIncomingData(ProxyConnection conn, int nbytes) {
+        ByteBuffer buf = conn.getServiceRecvBuffer();
+        byte[] data = new byte[buf.remaining()];
+        buf.get(data);
+        mProxyDataHandler.handleServiceDataReceived(conn, data);
+    }
+
     void handleServiceWrite(ProxyConnection conn) {
+        int totalWritten = 0;
+        for (;;) {
+            if (!conn.getServiceSendBuffer().hasRemaining()) {
+                // Nothing to write.
+                return;
+            }
+
+            int nwritten;
+            try {
+                nwritten = conn.getServiceSocket().write(conn.getServiceSendBuffer());
+            } catch (IOException exc) {
+                Log.e("ProxyServer", "Failed to write to service connection.");
+                conn.markServiceSocketError();
+                break;
+            }
+
+            if (nwritten <= 0) {
+                break;
+            }
+            totalWritten += nwritten;
+        }
+
+        if (totalWritten > 0) {
+            handleServiceOutgoingData(conn, totalWritten);
+        }
+    }
+
+    void handleServiceOutgoingData(ProxyConnection conn, int nbytes) {
+        mProxyDataHandler.handleServiceDataSent(conn, nbytes);
     }
 }
