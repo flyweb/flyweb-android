@@ -212,26 +212,22 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleLocalIncomingData(ProxyConnection conn, int nbytes) {
+    void handleLocalIncomingData(final ProxyConnection conn, final int nbytes) {
         ByteBuffer buf = conn.getLocalRecvBuffer();
         byte[] data = new byte[buf.remaining()];
         buf.get(data);
-        mProxyDataHandler.handleLocalDataReceived(conn, data);
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
+        final byte[] DATA = data;
 
-        CompletableFuture.runAsync(new Runnable() {
-            @Override
-            public void run() {
-                mProxyDataHandler.handleLocalDataReceived(conn, data);
+        Future<?> future = executor.submit(new Callable<Void>() {
+            public Void call() {
+                mProxyDataHandler.handleLocalDataReceived(conn, DATA);
+                return null;
             }
-        }, executor)
-                .orTimeout(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS)
-                .whenComplete((res, error) -> {
-                    if (error != null) {
-                        Log.e("ProxyServer", "Failed to handle incoming data")
-                    }
-                });
+        });
+
+        getFromFuture(future, "Failed to handle local incoming data.");
     }
 
     void handleLocalWrite(ProxyConnection conn) {
@@ -263,8 +259,17 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleLocalOutgoingData(ProxyConnection conn, int nbytes) {
-        mProxyDataHandler.handleLocalDataSent(conn, nbytes);
+    void handleLocalOutgoingData(final ProxyConnection conn, final int nbytes) {
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
+
+        Future<?> future = executor.submit(new Callable<Void>() {
+            public Void call() {
+                mProxyDataHandler.handleLocalDataSent(conn, nbytes);
+                return null;
+            }
+        });
+
+        getFromFuture(future, "Failed to handle local outgoing data.");
     }
 
     void handleServiceConnect(ProxyConnection conn) {
@@ -312,11 +317,22 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleServiceIncomingData(ProxyConnection conn, int nbytes) {
+    void handleServiceIncomingData(final ProxyConnection conn, final int nbytes) {
         ByteBuffer buf = conn.getServiceRecvBuffer();
         byte[] data = new byte[buf.remaining()];
         buf.get(data);
-        mProxyDataHandler.handleServiceDataReceived(conn, data);
+
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
+        final byte[] DATA = data;
+
+        Future<?> future = executor.submit(new Callable<Void>() {
+            public Void call() {
+                mProxyDataHandler.handleServiceDataReceived(conn, DATA);
+                return null;
+            }
+        });
+
+        getFromFuture(future, "Failed to handle service incoming data.");
     }
 
     void handleServiceWrite(ProxyConnection conn) {
@@ -347,7 +363,25 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleServiceOutgoingData(ProxyConnection conn, int nbytes) {
-        mProxyDataHandler.handleServiceDataSent(conn, nbytes);
+    void handleServiceOutgoingData(final ProxyConnection conn, final int nbytes) {
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
+        Future<?> future = executor.submit(new Callable<Void>() {
+            public Void call() {
+                mProxyDataHandler.handleServiceDataSent(conn, nbytes);
+                return null;
+            }
+        });
+
+        getFromFuture(future, "Failed to handle local outgoing data.");
+    }
+
+    void getFromFuture(Future future, String logMsg) {
+        try {
+            // Blocking call
+            future.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Log.e("ProxyServer", logMsg);
+            future.cancel(true);
+        }
     }
 }
