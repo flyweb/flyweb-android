@@ -212,22 +212,11 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleLocalIncomingData(final ProxyConnection conn, final int nbytes) {
+    void handleLocalIncomingData(ProxyConnection conn, int nbytes) {
         ByteBuffer buf = conn.getLocalRecvBuffer();
         byte[] data = new byte[buf.remaining()];
         buf.get(data);
-
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
-        final byte[] DATA = data;
-
-        Future<?> future = executor.submit(new Callable<Void>() {
-            public Void call() {
-                mProxyDataHandler.handleLocalDataReceived(conn, DATA);
-                return null;
-            }
-        });
-
-        getFromFuture(future, "Failed to handle local incoming data.");
+        mProxyDataHandler.handleLocalDataReceived(conn, data);
     }
 
     void handleLocalWrite(ProxyConnection conn) {
@@ -260,16 +249,7 @@ public class ProxyServer implements Runnable {
     }
 
     void handleLocalOutgoingData(final ProxyConnection conn, final int nbytes) {
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
-
-        Future<?> future = executor.submit(new Callable<Void>() {
-            public Void call() {
-                mProxyDataHandler.handleLocalDataSent(conn, nbytes);
-                return null;
-            }
-        });
-
-        getFromFuture(future, "Failed to handle local outgoing data.");
+        mProxyDataHandler.handleLocalDataSent(conn, nbytes);
     }
 
     void handleServiceConnect(ProxyConnection conn) {
@@ -308,7 +288,7 @@ public class ProxyServer implements Runnable {
                 break;
             }
 
-            buf.reset();
+            buf.clear();
         }
 
         if (totalRead > 0) {
@@ -317,22 +297,11 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleServiceIncomingData(final ProxyConnection conn, final int nbytes) {
+    void handleServiceIncomingData(ProxyConnection conn, int nbytes) {
         ByteBuffer buf = conn.getServiceRecvBuffer();
         byte[] data = new byte[buf.remaining()];
         buf.get(data);
-
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
-        final byte[] DATA = data;
-
-        Future<?> future = executor.submit(new Callable<Void>() {
-            public Void call() {
-                mProxyDataHandler.handleServiceDataReceived(conn, DATA);
-                return null;
-            }
-        });
-
-        getFromFuture(future, "Failed to handle service incoming data.");
+        mProxyDataHandler.handleServiceDataReceived(conn, data);
     }
 
     void handleServiceWrite(ProxyConnection conn) {
@@ -363,25 +332,7 @@ public class ProxyServer implements Runnable {
         }
     }
 
-    void handleServiceOutgoingData(final ProxyConnection conn, final int nbytes) {
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_FIXED_THREAD_POOL);
-        Future<?> future = executor.submit(new Callable<Void>() {
-            public Void call() {
-                mProxyDataHandler.handleServiceDataSent(conn, nbytes);
-                return null;
-            }
-        });
-
-        getFromFuture(future, "Failed to handle local outgoing data.");
-    }
-
-    void getFromFuture(Future future, String logMsg) {
-        try {
-            // Blocking call
-            future.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            Log.e("ProxyServer", logMsg);
-            future.cancel(true);
-        }
+    void handleServiceOutgoingData(ProxyConnection conn, int nbytes) {
+        mProxyDataHandler.handleServiceDataSent(conn, nbytes);
     }
 }
