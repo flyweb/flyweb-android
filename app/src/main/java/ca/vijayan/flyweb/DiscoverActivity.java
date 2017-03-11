@@ -67,6 +67,11 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
         startActivity(intent);
     }
 
+    public void onShareButtonSelected(View target) {
+        Intent intent = new Intent(this, ShareActivity.class);
+        startActivity(intent);
+    }
+
     @Override
     public boolean handleMessage(Message message) {
         if (message.what == MESSAGE_ADD_SERVICE) {
