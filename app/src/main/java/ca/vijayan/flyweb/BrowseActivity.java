@@ -57,9 +57,12 @@ public class BrowseActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 Uri uri = req.getUrl();
-                if (mServiceInfo.getAddress().getHostAddress().equals(uri.getHost()) &&
-                    (mServiceInfo.getPort() == uri.getPort()))
-                {
+                int uriPort = uri.getPort();
+                if (uriPort == -1) {
+                    uriPort = 80;
+                }
+                if (mServiceInfo.getAddress().getHostAddress().equals(uriPort) &&
+                    (mServiceInfo.getPort() == uriPort)) {
                     return false;
                 } else {
                     view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, req.getUrl()));
