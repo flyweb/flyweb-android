@@ -5,14 +5,14 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
 
 /**
  * Created by Irene Chen on 3/12/2017.
@@ -60,22 +60,27 @@ public class NanoHttpdServer extends NanoHTTPD {
 
         final File outFile = new File(directoryPath + testFilePath);
         if (outFile.exists()) {
-            Callable<Void> callable = new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    new OverwriteDialog(tempFilePath, outFile).execute();
-                    return null;
+//            Runnable runnable = new Runnable() {
+//                @Override
+//                public void run() {
+//                    new OverwriteDialog(tempFilePath, outFile).execute();
+//                }
+//            };
+//            Thread t = new Thread(runnable);
+//
+//            mActivity.runOnUiThread(t);
+            Thread t = new OverwriteDialogThread(tempFilePath, outFile);
+            t.start();
+            synchronized (t) {
+                try {
+                    Log.d("Server", "Waiting for input");
+                    t.wait();
+                } catch (InterruptedException e) {
+                    Log.d("NanoHttpdServer", "Overwrite confirmation dialog interuppted.");
                 }
-            };
-            FutureTask<Void> task = new FutureTask<>(callable);
-            mActivity.runOnUiThread(task);
-            try {
-                Log.d("Server", "trying");
-                task.get();
-            } catch (Exception e) {
-                Log.e("Exception", "hteehee");
-                e.printStackTrace();
+                Log.d("Server", "Finished waiting");
             }
+            Log.d("Server", "we here");
         } else {
             write(tempFilePath, outFile);
         }
@@ -100,7 +105,9 @@ public class NanoHttpdServer extends NanoHTTPD {
             inStream.close();
             outStream.close();
             success = true;
+            Log.d("Server", "Finish write");
         } catch (Exception e) {
+            e.printStackTrace();
             Log.e("NanoHttpdServer", "Error writing out file when uploading");
         }
     }
@@ -116,9 +123,21 @@ public class NanoHttpdServer extends NanoHTTPD {
             Log.d("Files", "FileName:" + files[i].getName());
         }
     }
+    private class OverwriteDialogThread extends Thread {
+        //private AlertDialog ad;
+        private String srcPath;
+        private File outFile;
+        private Handler handler;
 
-    private class OverwriteDialog extends AsyncTask<Void, Void, Void> {
-        public OverwriteDialog(final String srcPath, final File outFile) {
+        public OverwriteDialogThread(final String srcPath, final File outFile) {
+            this.srcPath = srcPath;
+            this.outFile = outFile;
+        }
+
+        public void run() {
+            Looper.prepare();
+
+            handler = new Handler();
             new AlertDialog.Builder(mActivity)
                     .setTitle("File already exists")
                     .setMessage("Do you want to overwrite the existing file?")
@@ -126,11 +145,50 @@ public class NanoHttpdServer extends NanoHTTPD {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
                             write(srcPath, outFile);
+                            Log.d("Server", "notifyThread");
+                            notifyThread();
                         }
                     })
                     .setNegativeButton("No", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
+                            notifyThread();
+                        }
+                    }).show();
+
+            Looper.loop();
+        }
+
+        void notifyThread() {
+            synchronized (this) {
+                Log.d("Server", "Synced notify");
+                notify();
+            }
+        }
+    }
+    private class OverwriteDialog extends AsyncTask<Void, Void, Void> {
+        public OverwriteDialog(final String srcPath, final File outFile) {
+            new AlertDialog.Builder(mActivity)
+                    .setTitle("File already exists")
+                    .setMessage("Do you want to overwrite the existing file?")
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            synchronized (this) {
+                                dialog.dismiss();
+                                Log.d("Server", "dismiss");
+                                write(srcPath, outFile);
+                                Log.d("Server", "notify");
+                                notifyAll();
+                            }
+                        }
+                    })
+                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            synchronized (this) {
+                                dialog.dismiss();
+                                Log.d("server", "notify");
+                                notify();
+                            }
                         }
                     }).show();
         }
