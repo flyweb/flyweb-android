@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -32,6 +33,11 @@ public class ShareActivity extends AppCompatActivity {
 
         checkPermissions();
 
+        if (!isExternalStorageWritable()) {
+            Log.e("ShareActivity", "Cannot write to external storage");
+            // TODO notify user external storage is not available even though we have the permissions
+        }
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.upload);
         server = new NanoHttpdServer(this);
 
@@ -51,8 +57,6 @@ public class ShareActivity extends AppCompatActivity {
         }
     }
 
-
-
     private void checkPermissions() {
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         if (permission != PackageManager.PERMISSION_GRANTED) {
@@ -63,4 +67,13 @@ public class ShareActivity extends AppCompatActivity {
             );
         }
     }
+
+    private boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
 }
