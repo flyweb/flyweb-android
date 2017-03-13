@@ -2,11 +2,14 @@ package ca.vijayan.flyweb.embedded_server;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.DialogInterface;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.*;
@@ -19,10 +22,11 @@ import java.util.Map;
  */
 
 public class NanoHttpdServer extends NanoHTTPD {
-    private final static int DEFAULT_PORT = 8080;
+    private static final int DEFAULT_PORT = 8080;
+    private final String NANOHTTPD_KEY = "file";
 
     private Activity mActivity;
-    private String directoryPath = Environment.getExternalStorageDirectory() + "/" + Environment.DIRECTORY_PICTURES;
+    private File directoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     private boolean success;
 
     public NanoHttpdServer(Activity activity) {
@@ -55,12 +59,12 @@ public class NanoHttpdServer extends NanoHTTPD {
         }
 
         // TODO iterate over map for multiple files
-        String tempFilePath = files.get("file");
+        String tempFilePath = files.get(NANOHTTPD_KEY);
         if (tempFilePath == null || tempFilePath.isEmpty()) {
             return generateResponse(Strings.PLEASE_UPLOAD_VALID_FILE);
         }
 
-        List<String> fileParam = params.get("file");
+        List<String> fileParam = params.get(NANOHTTPD_KEY);
         if (fileParam == null || fileParam.isEmpty()) {
             return generateResponse(Strings.PLEASE_UPLOAD_VALID_FILE);
         }
@@ -87,6 +91,11 @@ public class NanoHttpdServer extends NanoHTTPD {
             }
 
             if (success) {
+                DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(
+                        mActivity.DOWNLOAD_SERVICE);
+                downloadManager.addCompletedDownload(originalFileName, originalFileName, true,
+                        getMimeType(Uri.fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(),
+                        true);
                 return generateResponse(Strings.SUCCESSFULLY_UPLOADED);
             }
         }
@@ -99,7 +108,7 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     private boolean checkDir() {
-        File dir = new File(directoryPath);
+        File dir = new File(directoryPath.toString());
         boolean dirExists = dir.isDirectory();
         if (!dir.isDirectory()) {
             dirExists = dir.mkdir();
@@ -122,6 +131,16 @@ public class NanoHttpdServer extends NanoHTTPD {
         } catch (Exception e) {
             Log.e("NanoHttpdServer", "Error writing out file when uploading.");
         }
+    }
+
+    private String getMimeType(String uri) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(uri);
+        if (extension != null) {
+            MimeTypeMap mime = MimeTypeMap.getSingleton();
+            type = mime.getMimeTypeFromExtension(extension);
+        }
+        return type;
     }
 
     private class OverwriteDialogThread extends Thread {
@@ -161,7 +180,9 @@ public class NanoHttpdServer extends NanoHTTPD {
                             dialog.dismiss();
                             notifyThread();
                         }
-                    }).show();
+                    })
+                    .setCancelable(false)
+                    .show();
 
             Looper.loop();
         }
