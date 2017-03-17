@@ -24,14 +24,16 @@ import java.util.Map;
 public class NanoHttpdServer extends NanoHTTPD {
     private static final int DEFAULT_PORT = 8080;
     private final String NANOHTTPD_KEY = "file";
-
+	private final File directoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+	
     private Activity mActivity;
-    private File directoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     private boolean success;
+	private Map<String, File> fileMap;
 
     public NanoHttpdServer(Activity activity) {
         super(DEFAULT_PORT);
         mActivity = activity;
+		fileMap = new HashMap<>();
     }
 
     @Override
@@ -40,9 +42,27 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     public Response get() {
-        return generateResponse("<form name='up' method='post' enctype='multipart/form-data'>"
-                + "<input type='file' name='file' /><br />"
-                + "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />");
+		if (fileMap.isEmpty()) {
+			return generateResponse("<form name='up' method='post' enctype='multipart/form-data'>"
+					+ "<input type='file' name='file' /><br />"
+					+ "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />");
+		}
+		
+		try {
+			Iterator<File> it = map.values();
+			DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(
+							mActivity.DOWNLOAD_SERVICE);
+			while (it.hasNext()) {
+					File file = it.next();
+					String originalFileName = file.getName();
+					downloadManager.addCompletedDownload(originalFileName, originalFileName, true,
+							getMimeType(Uri.fromFile(file).toString()), file.getAbsolutePath(), file.length(), true);
+			}
+			return generateResponse(Strings.DOWNLOAD_COMPLETE);
+		} catch (Exception e) {
+			Log.e("NanoHttpdServer", "Error download files.");
+		}
+		return generatedResponse("Strings.FAILED_DOWNLOAD");
     }
 
     public Response post(IHTTPSession session) {
@@ -91,11 +111,6 @@ public class NanoHttpdServer extends NanoHTTPD {
             }
 
             if (success) {
-                DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(
-                        mActivity.DOWNLOAD_SERVICE);
-                downloadManager.addCompletedDownload(originalFileName, originalFileName, true,
-                        getMimeType(Uri.fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(),
-                        true);
                 return generateResponse(Strings.SUCCESSFULLY_UPLOADED);
             }
         }
@@ -125,6 +140,7 @@ public class NanoHttpdServer extends NanoHTTPD {
             while ((bytesRead = inStream.read()) > -1) {
                 outStream.write(bytesRead);
             }
+			fileMap.put(UUID.randomUUID().toString(), outFile);
             inStream.close();
             outStream.close();
             success = true;
