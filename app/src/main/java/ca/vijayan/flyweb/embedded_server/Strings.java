@@ -1,7 +1,7 @@
 package ca.vijayan.flyweb.embedded_server;
 
 /**
- * Created by karui on 3/12/2017.
+ * Created by Irene Chen on 3/12/2017.
  */
 
 public class Strings {

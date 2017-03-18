@@ -2,7 +2,10 @@ package ca.vijayan.flyweb;
 
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
@@ -21,8 +24,10 @@ public class ShareActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
-    private ProgressDialog progressDialog = null;
-    private NanoHttpdServer server = null;
+    private ProgressDialog mProgressDialog = null;
+    private NanoHttpdServer mServer = null;
+    private NsdManager mNsdManager;
+    private NsdManager.RegistrationListener mRegistrationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,22 +44,36 @@ public class ShareActivity extends AppCompatActivity {
         }
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.upload);
-        server = new NanoHttpdServer(this);
+        mServer = new NanoHttpdServer(this);
 
         try {
-            server.start();
+            mServer.start();
+            if (mServer != null) {
+                registerService();
+            }
         } catch (IOException e) {
-            Log.e("ShareActivity", "NanoHttpd server cannot be started.");
+            Log.e("ShareActivity", "NanoHttpd mServer cannot be started.");
         }
     }
 
     @Override
-    public void onDestroy()
-    {
+    public void onDestroy() {
         super.onDestroy();
-        if (server != null) {
-            server.stop();
+        if (mServer != null) {
+            mServer.stop();
+            mNsdManager.unregisterService(mRegistrationListener);
         }
+    }
+
+    public void registerService() {
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName(mServer.getServiceName());
+        serviceInfo.setServiceType("_flyweb._tcp");
+        serviceInfo.setPort(NanoHttpdServer.DEFAULT_PORT);
+        initializeRegistrationListener();
+        mNsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
+        mNsdManager.registerService(
+                serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
     }
 
     private void checkPermissions() {
@@ -76,4 +95,26 @@ public class ShareActivity extends AppCompatActivity {
         return false;
     }
 
+    public void initializeRegistrationListener() {
+        mRegistrationListener = new NsdManager.RegistrationListener() {
+
+            @Override
+            public void onServiceRegistered(NsdServiceInfo NsdServiceInfo) {
+            }
+
+            @Override
+            public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                Log.e("ShareActivity", "Failed to register embedded server.");
+            }
+
+            @Override
+            public void onServiceUnregistered(NsdServiceInfo arg0) {
+            }
+
+            @Override
+            public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                Log.e("ShareActivity", "Failed to unregister embedded server.");
+            }
+        };
+    }
 }

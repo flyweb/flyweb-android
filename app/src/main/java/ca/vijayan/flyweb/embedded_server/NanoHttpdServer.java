@@ -13,27 +13,26 @@ import android.webkit.MimeTypeMap;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by Irene Chen on 3/12/2017.
  */
 
 public class NanoHttpdServer extends NanoHTTPD {
-    private static final int DEFAULT_PORT = 8080;
+    public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
     private final String NANOHTTPD_KEY = "file";
 	private final File directoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 	
     private Activity mActivity;
-    private boolean success;
-	private Map<String, File> fileMap;
+    private boolean mSuccess;
+	private Map<String, File> mFileMap;
+    private String mServiceName = "File Sharing"; // TODO change service name based on device name
 
     public NanoHttpdServer(Activity activity) {
         super(DEFAULT_PORT);
         mActivity = activity;
-		fileMap = new HashMap<>();
+		mFileMap = new HashMap<>();
     }
 
     @Override
@@ -42,14 +41,14 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     public Response get() {
-		if (fileMap.isEmpty()) {
+		if (mFileMap.isEmpty()) {
 			return generateResponse("<form name='up' method='post' enctype='multipart/form-data'>"
 					+ "<input type='file' name='file' /><br />"
 					+ "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />");
 		}
 		
 		try {
-			Iterator<File> it = map.values();
+			Iterator<File> it = mFileMap.values().iterator();
 			DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(
 							mActivity.DOWNLOAD_SERVICE);
 			while (it.hasNext()) {
@@ -62,11 +61,11 @@ public class NanoHttpdServer extends NanoHTTPD {
 		} catch (Exception e) {
 			Log.e("NanoHttpdServer", "Error download files.");
 		}
-		return generatedResponse("Strings.FAILED_DOWNLOAD");
+		return generateResponse(Strings.FAILED_DOWNLOAD);
     }
 
     public Response post(IHTTPSession session) {
-        success = false;
+        mSuccess = false;
         Map<String, String> files = new HashMap<>();
         Map<String, List<String>> params;
 
@@ -110,11 +109,15 @@ public class NanoHttpdServer extends NanoHTTPD {
                 write(tempFilePath, outFile);
             }
 
-            if (success) {
+            if (mSuccess) {
                 return generateResponse(Strings.SUCCESSFULLY_UPLOADED);
             }
         }
         return generateResponse(Strings.FAILED_UPLOAD);
+    }
+
+    public String getServiceName() {
+        return mServiceName;
     }
 
     private Response generateResponse(String content) {
@@ -140,10 +143,10 @@ public class NanoHttpdServer extends NanoHTTPD {
             while ((bytesRead = inStream.read()) > -1) {
                 outStream.write(bytesRead);
             }
-			fileMap.put(UUID.randomUUID().toString(), outFile);
+			mFileMap.put(UUID.randomUUID().toString(), outFile);
             inStream.close();
             outStream.close();
-            success = true;
+            mSuccess = true;
         } catch (Exception e) {
             Log.e("NanoHttpdServer", "Error writing out file when uploading.");
         }
