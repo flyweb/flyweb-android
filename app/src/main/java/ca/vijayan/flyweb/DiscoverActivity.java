@@ -11,13 +11,17 @@ import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
-import ca.vijayan.flyweb.embedded_server.NanoHttpdServer;
+import ca.vijayan.flyweb.embedded_server.Common;
+import ca.vijayan.flyweb.embedded_server.DownloadHelper;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +39,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     Handler mHandler;
     DiscoverListAdapter mDiscoverListAdapter;
     MDNSManager mMDNSManager;
+    List<File> mFilesToDownload;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +48,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
         mHandler = new Handler(this);
         mDiscoverListAdapter = new DiscoverListAdapter(this);
+        mFilesToDownload = new ArrayList<>();
 
         try {
             mMDNSManager = new MDNSManager(mHandler);
@@ -69,7 +75,8 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     }
 
     public void onItemSelected(View target) {
-        if (isEmbeddedServer((DNSServiceInfo) target.getTag())) {
+        mFilesToDownload = new ArrayList<>();
+        if (isEmbeddedServer((DNSServiceInfo) target.getTag(), this)) {
             // TODO
         } else {
             Intent intent = new Intent(this, BrowseActivity.class);
@@ -107,7 +114,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     }
 
     // TODO set timeout
-    private boolean isEmbeddedServer(DNSServiceInfo dnsServiceInfo) {
+    private boolean isEmbeddedServer(DNSServiceInfo dnsServiceInfo, final Activity activity) {
         AsyncTask<DNSServiceInfo, Void, Boolean> task = new AsyncTask<DNSServiceInfo, Void, Boolean>() {
             @Override
             protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
@@ -115,7 +122,8 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
                     URL object = new URL(dnsServiceInfo1[0].getBaseURL());
                     HttpURLConnection connection = (HttpURLConnection) object.openConnection();
                     if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                        return connection.getHeaderField(NanoHttpdServer.FLYWEB_HEADER) != null;
+                        new DownloadHelper(connection, activity);
+                        return connection.getHeaderField(Common.FLYWEB_HEADER) != null;
                     }
                     return false;
                 } catch (IOException e) {
@@ -125,6 +133,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
                 }
             }
         };
+
         boolean res = false;
         try {
             res = task.execute(dnsServiceInfo).get(TIMEOUT_IN_MILLIS, TimeUnit.MILLISECONDS);

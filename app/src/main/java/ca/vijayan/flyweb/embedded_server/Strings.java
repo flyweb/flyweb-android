@@ -14,6 +14,5 @@ public class Strings {
     public static final String OVERWRITE_PERMISSION_REQUEST = "Do you want to overwrite the existing file?";
     public static final String YES = "Yes";
     public static final String NO = "No";
-	public static final String DOWNLOAD_COMPLETE = "Download complete";
 	public static final String FAILED_DOWNLOAD = "Error downloading files";
 }
