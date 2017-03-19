@@ -36,7 +36,7 @@ public class Common {
     }
 
 
-    public static void checkPermissions(Activity activity) {
+    public static boolean checkPermissions(Activity activity) {
         int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         if (permission != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -44,6 +44,8 @@ public class Common {
                     PERMISSIONS_STORAGE,
                     REQUEST_EXTERNAL_STORAGE
             );
+            return false;
         }
+        return true;
     }
 }

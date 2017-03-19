@@ -2,17 +2,16 @@ package ca.vijayan.flyweb;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.os.*;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.Toast;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.DownloadHelper;
+import ca.vijayan.flyweb.embedded_server.Strings;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
 
@@ -154,8 +153,25 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
         }
 
         if (header.equals("false")) {
-            new DownloadHelper(connection, activity);
+            if (Common.checkPermissions(this)) {
+                boolean downloadSuccess = new DownloadHelper(connection, activity).download();
+                if (downloadSuccess) {
+                    handleToast(Strings.DOWNLOAD_SUCCESSFUL);
+                } else {
+                    handleToast(Strings.DOWNLOAD_UNSUCCESSFUL);
+                }
+            }
+        } else {
+            handleToast(Strings.NO_FILES_AVAILABLE);
         }
         return true;
+    }
+
+    private void handleToast(final String text) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

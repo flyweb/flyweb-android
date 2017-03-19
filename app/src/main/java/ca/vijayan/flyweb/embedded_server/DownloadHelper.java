@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.DialogInterface;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -20,15 +19,15 @@ import java.net.HttpURLConnection;
 public class DownloadHelper {
     private HttpURLConnection mConn;
     private Activity mActivity;
+    private boolean mSuccess;
 
     public DownloadHelper(HttpURLConnection conn, Activity activity) {
         mConn = conn;
         mActivity = activity;
-        Common.checkPermissions(activity);
-        download();
     }
 
-    private void download() {
+    public boolean download() {
+        mSuccess = false;
         String originalFileName = mConn.getHeaderField(Common.HEADER_FILENAME_KEY);
 
         boolean dirExists = checkDir();
@@ -42,7 +41,7 @@ public class DownloadHelper {
                     try {
                         t.wait();
                     } catch (InterruptedException e) {
-                        Log.e("NanoHttpdServer", "Overwrite confirmation dialog interrupted.");
+                        Log.e("DownloadHelper", "Overwrite confirmation dialog interrupted.");
                     }
                 }
             } else {
@@ -50,11 +49,16 @@ public class DownloadHelper {
             }
         }
 
-        DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
+        try {
+            DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
+            downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
+                    fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(), true);
+            mSuccess = true;
+        } catch (Exception e) {
+            Log.e("DownloadHelper", Strings.DOWNLOAD_UNSUCCESSFUL);
+        }
 
-        downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
-                 fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(), true);
-
+        return mSuccess;
     }
 
     private boolean checkDir() {

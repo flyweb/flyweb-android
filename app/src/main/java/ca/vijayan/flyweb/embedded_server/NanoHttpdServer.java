@@ -3,7 +3,6 @@ package ca.vijayan.flyweb.embedded_server;
 import android.app.Activity;
 import android.net.Uri;
 import android.util.Log;
-import android.webkit.MimeTypeMap;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.*;
@@ -49,7 +48,7 @@ public class NanoHttpdServer extends NanoHTTPD {
                 }
             } catch (Exception e) {
                 Log.e("NanoHttpdServer", "Error download files.");
-                response = generateHtmlResponse(Strings.FAILED_DOWNLOAD);
+                response = generateHtmlResponse(Strings.DOWNLOAD_UNSUCCESSFUL);
             }
         }
         response.addHeader(Common.FLYWEB_HEADER, String.valueOf(mFiles.isEmpty()));
