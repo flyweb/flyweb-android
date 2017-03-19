@@ -14,15 +14,15 @@ import android.widget.ListView;
 import ca.vijayan.flyweb.embedded_server.NanoHttpdServer;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
-import ca.vijayan.flyweb.utils.AsyncOpDelegate;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-public class DiscoverActivity extends Activity implements Handler.Callback, AsyncOpDelegate {
+public class DiscoverActivity extends Activity implements Handler.Callback {
 
     static public final String EXTRA_SERVICE_INFO = "ca.vijayan.flyweb.SERVICE_INFO";
 
@@ -30,10 +30,11 @@ public class DiscoverActivity extends Activity implements Handler.Callback, Asyn
     static public final int MESSAGE_REMOVE_SERVICE = 1;
     static public final int MESSAGE_UPDATE_SERVICE = 2;
 
+    static private final int TIMEOUT_IN_MILLIS = 30000;
+
     Handler mHandler;
     DiscoverListAdapter mDiscoverListAdapter;
     MDNSManager mMDNSManager;
-    boolean mIsEmbeddedServer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,22 +69,13 @@ public class DiscoverActivity extends Activity implements Handler.Callback, Asyn
     }
 
     public void onItemSelected(View target) {
-        mIsEmbeddedServer = false;
-        NetworkWithDelegate networkWithDelegate = new NetworkWithDelegate(this);
-       // networkWithDelegate.execute((DNSServiceInfo) target.getTag());
-        try {
-            boolean testVar = networkWithDelegate.execute((DNSServiceInfo) target.getTag()).get();
-            if (testVar) {
-                Log.d("tee", "Is embedded server");
-            } else {
-                Log.d("d", "not embedded server");
-                Intent intent = new Intent(this, BrowseActivity.class);
-                DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
-                intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
-                startActivity(intent);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (isEmbeddedServer((DNSServiceInfo) target.getTag())) {
+            // TODO
+        } else {
+            Intent intent = new Intent(this, BrowseActivity.class);
+            DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
+            intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
+            startActivity(intent);
         }
     }
 
@@ -114,37 +106,33 @@ public class DiscoverActivity extends Activity implements Handler.Callback, Asyn
         return false;
     }
 
-    @Override
-    public void onTaskCompleted(boolean result) {
-        mIsEmbeddedServer = result;
-    }
-
-    private class NetworkWithDelegate extends AsyncTask<DNSServiceInfo,Void,Boolean> {
-        private AsyncOpDelegate delegate;
-
-        public NetworkWithDelegate(AsyncOpDelegate delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
-            try {
-                URL object = new URL(dnsServiceInfo1[0].getBaseURL());
-                HttpURLConnection connection = (HttpURLConnection) object.openConnection();
-                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    return connection.getHeaderField(NanoHttpdServer.FLYWEB_HEADER) != null;
+    // TODO set timeout
+    private boolean isEmbeddedServer(DNSServiceInfo dnsServiceInfo) {
+        AsyncTask<DNSServiceInfo, Void, Boolean> task = new AsyncTask<DNSServiceInfo, Void, Boolean>() {
+            @Override
+            protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
+                try {
+                    URL object = new URL(dnsServiceInfo1[0].getBaseURL());
+                    HttpURLConnection connection = (HttpURLConnection) object.openConnection();
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        return connection.getHeaderField(NanoHttpdServer.FLYWEB_HEADER) != null;
+                    }
+                    return false;
+                } catch (IOException e) {
+                    Log.e("DiscoverActivity", "Failed to open URL connection.");
+                    e.printStackTrace();
+                    return false;
                 }
-                return false;
-            } catch (IOException e) {
-                Log.e("DiscoverActivity", "Failed to open URL connection.");
-                e.printStackTrace();
-                return false;
             }
+        };
+        boolean res = false;
+        try {
+            res = task.execute(dnsServiceInfo).get(TIMEOUT_IN_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException e) {
+            Log.d("DiscoverActivity", "Failed to get headers from URL connection.");
+        } catch (TimeoutException e) {
+            Log.d("DiscoverActivity", "Timed out while trying to check headers.");
         }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            delegate.onTaskCompleted(result);
-        }
+        return res;
     }
 }
