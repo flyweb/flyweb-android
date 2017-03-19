@@ -2,6 +2,7 @@ package ca.vijayan.flyweb;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -10,13 +11,18 @@ import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
-
-import java.io.IOException;
-
+import ca.vijayan.flyweb.embedded_server.NanoHttpdServer;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
+import ca.vijayan.flyweb.utils.AsyncOpDelegate;
 
-public class DiscoverActivity extends Activity implements Handler.Callback {
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+import java.util.Map;
+
+public class DiscoverActivity extends Activity implements Handler.Callback, AsyncOpDelegate {
 
     static public final String EXTRA_SERVICE_INFO = "ca.vijayan.flyweb.SERVICE_INFO";
 
@@ -27,6 +33,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     Handler mHandler;
     DiscoverListAdapter mDiscoverListAdapter;
     MDNSManager mMDNSManager;
+    boolean mIsEmbeddedServer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,10 +68,23 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     }
 
     public void onItemSelected(View target) {
-        Intent intent = new Intent(this, BrowseActivity.class);
-        DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
-        intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
-        startActivity(intent);
+        mIsEmbeddedServer = false;
+        NetworkWithDelegate networkWithDelegate = new NetworkWithDelegate(this);
+       // networkWithDelegate.execute((DNSServiceInfo) target.getTag());
+        try {
+            boolean testVar = networkWithDelegate.execute((DNSServiceInfo) target.getTag()).get();
+            if (testVar) {
+                Log.d("tee", "Is embedded server");
+            } else {
+                Log.d("d", "not embedded server");
+                Intent intent = new Intent(this, BrowseActivity.class);
+                DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
+                intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
+                startActivity(intent);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void onShareButtonSelected(View target) {
@@ -92,5 +112,39 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void onTaskCompleted(boolean result) {
+        mIsEmbeddedServer = result;
+    }
+
+    private class NetworkWithDelegate extends AsyncTask<DNSServiceInfo,Void,Boolean> {
+        private AsyncOpDelegate delegate;
+
+        public NetworkWithDelegate(AsyncOpDelegate delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
+            try {
+                URL object = new URL(dnsServiceInfo1[0].getBaseURL());
+                HttpURLConnection connection = (HttpURLConnection) object.openConnection();
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    return connection.getHeaderField(NanoHttpdServer.FLYWEB_HEADER) != null;
+                }
+                return false;
+            } catch (IOException e) {
+                Log.e("DiscoverActivity", "Failed to open URL connection.");
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            delegate.onTaskCompleted(result);
+        }
     }
 }

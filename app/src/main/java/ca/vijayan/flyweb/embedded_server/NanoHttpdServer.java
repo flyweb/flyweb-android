@@ -21,13 +21,14 @@ import java.util.*;
 
 public class NanoHttpdServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
+    public static final String FLYWEB_HEADER = "Flyweb";
     private final String NANOHTTPD_KEY = "file";
 	private final File directoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 	
     private Activity mActivity;
     private boolean mSuccess;
 	private Map<String, File> mFileMap;
-    private String mServiceName = "File Sharing"; // TODO change service name based on device name
+    private String mServiceName = "Flyweb File Sharing"; // TODO change service name based on device name
 
     public NanoHttpdServer(Activity activity) {
         super(DEFAULT_PORT);
@@ -121,8 +122,10 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     private Response generateResponse(String content) {
-        return newFixedLengthResponse(new StringBuilder("<html><body>").append(content).append("</body></html>")
-                .toString());
+        Response response = newFixedLengthResponse(new StringBuilder("<html><body>").append(content)
+                .append("</body></html>").toString());
+        response.addHeader(FLYWEB_HEADER, FLYWEB_HEADER);
+        return response;
     }
 
     private boolean checkDir() {
