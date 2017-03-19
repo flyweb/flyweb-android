@@ -52,7 +52,7 @@ public class DownloadHelper {
 
         DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
 
-         downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
+        downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
                  fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(), true);
 
     }

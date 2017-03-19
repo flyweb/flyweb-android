@@ -113,26 +113,8 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
         return false;
     }
 
-    // TODO set timeout
     private boolean isEmbeddedServer(DNSServiceInfo dnsServiceInfo, final Activity activity) {
-        AsyncTask<DNSServiceInfo, Void, Boolean> task = new AsyncTask<DNSServiceInfo, Void, Boolean>() {
-            @Override
-            protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
-                try {
-                    URL object = new URL(dnsServiceInfo1[0].getBaseURL());
-                    HttpURLConnection connection = (HttpURLConnection) object.openConnection();
-                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                        new DownloadHelper(connection, activity);
-                        return connection.getHeaderField(Common.FLYWEB_HEADER) != null;
-                    }
-                    return false;
-                } catch (IOException e) {
-                    Log.e("DiscoverActivity", "Failed to open URL connection.");
-                    e.printStackTrace();
-                    return false;
-                }
-            }
-        };
+        AsyncTask<DNSServiceInfo, Void, Boolean> task = getTaskForIsEmbeddedServer(activity);
 
         boolean res = false;
         try {
@@ -143,5 +125,37 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
             Log.d("DiscoverActivity", "Timed out while trying to check headers.");
         }
         return res;
+    }
+
+    private AsyncTask<DNSServiceInfo, Void, Boolean> getTaskForIsEmbeddedServer(final Activity activity) {
+        return new AsyncTask<DNSServiceInfo, Void, Boolean>() {
+            @Override
+            protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
+                try {
+                    URL object = new URL(dnsServiceInfo1[0].getBaseURL());
+                    HttpURLConnection connection = (HttpURLConnection) object.openConnection();
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        return hasFlywebHeader(connection, activity);
+                    }
+                    return false;
+                } catch (IOException e) {
+                    Log.e("DiscoverActivity", "Failed to open URL connection.");
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+        };
+    }
+
+    private boolean hasFlywebHeader(HttpURLConnection connection, Activity activity) {
+        String header = connection.getHeaderField(Common.FLYWEB_HEADER);
+        if (header == null) {
+            return false;
+        }
+
+        if (header.equals("false")) {
+            new DownloadHelper(connection, activity);
+        }
+        return true;
     }
 }

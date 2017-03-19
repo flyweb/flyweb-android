@@ -16,16 +16,16 @@ import java.util.*;
 public class NanoHttpdServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
     private final String NANOHTTPD_KEY = "file";
-	
+
     private Activity mActivity;
     private boolean mSuccess;
-	private List<File> mFiles;
+    private List<File> mFiles;
     private String mServiceName = "Flyweb File Sharing"; // TODO change service name based on device name
 
     public NanoHttpdServer(Activity activity) {
         super(DEFAULT_PORT);
         mActivity = activity;
-		mFiles = new ArrayList<>();
+        mFiles = new ArrayList<>();
     }
 
     @Override
@@ -34,21 +34,26 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     public Response get() {
-		if (mFiles.isEmpty()) {
-			return generateHtmlResponse("<form name='up' method='post' enctype='multipart/form-data'>"
-					+ "<input type='file' name='file' /><br />"
-					+ "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />");
-		}
-		
-		try {
-			for (File file : mFiles) { // there should only be one element in the map right now; return on first loop
-                FileInputStream fis = new FileInputStream(file);
-                return newChunkedResponse(Response.Status.OK, Common.getMimeType(Uri.fromFile(file).toString()), fis);
+        Response response = null;
+        if (mFiles.isEmpty()) {
+            response = generateHtmlResponse("<form name='up' method='post' enctype='multipart/form-data'>"
+                    + "<input type='file' name='file' /><br />"
+                    + "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />");
+        } else {
+            try {
+                for (File file : mFiles) { // there should only be one element in the map right now; return on first loop
+                    FileInputStream fis = new FileInputStream(file);
+                    response = newChunkedResponse(Response.Status.OK, Common.getMimeType(Uri.fromFile(file).toString()),
+                            fis);
+                    response.addHeader(Common.HEADER_FILENAME_KEY, file.getName());
+                }
+            } catch (Exception e) {
+                Log.e("NanoHttpdServer", "Error download files.");
+                response = generateHtmlResponse(Strings.FAILED_DOWNLOAD);
             }
-		} catch (Exception e) {
-			Log.e("NanoHttpdServer", "Error download files.");
-		}
-		return generateHtmlResponse(Strings.FAILED_DOWNLOAD);
+        }
+        response.addHeader(Common.FLYWEB_HEADER, String.valueOf(mFiles.isEmpty()));
+        return response;
     }
 
     public Response post(IHTTPSession session) {
@@ -84,7 +89,6 @@ public class NanoHttpdServer extends NanoHTTPD {
         Response response = null;
         if (mSuccess) {
             response = generateHtmlResponse(Strings.SUCCESSFULLY_UPLOADED);
-            response.addHeader(Common.HEADER_FILENAME_KEY, originalFileName);
         } else {
             response = generateHtmlResponse(Strings.FAILED_UPLOAD);
         }
@@ -99,7 +103,6 @@ public class NanoHttpdServer extends NanoHTTPD {
     private Response generateHtmlResponse(String content) {
         Response response = newFixedLengthResponse(new StringBuilder("<html><body>").append(content)
                 .append("</body></html>").toString());
-        response.addHeader(Common.FLYWEB_HEADER, Common.FLYWEB_HEADER);
         return response;
     }
 
@@ -112,7 +115,7 @@ public class NanoHttpdServer extends NanoHTTPD {
             while ((bytesRead = inStream.read()) > -1) {
                 outStream.write(bytesRead);
             }
-			mFiles.add(outFile);
+            mFiles.add(outFile);
             inStream.close();
             outStream.close();
             mSuccess = true;
