@@ -20,33 +20,75 @@ public class ShareActivity extends AppCompatActivity {
     private NanoHttpdServer mServer = null;
     private NsdManager mNsdManager;
     private NsdManager.RegistrationListener mRegistrationListener;
+    private DNSServiceInfo mServiceInfo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_share);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        setContentView(R.layout.activity_browse);
 
-        Common.checkPermissions(this);
-
+        boolean havePermissions = Common.checkPermissions(this);
+	   
+	   if (havePermissions) {
         if (!isExternalStorageWritable()) {
             Log.e("ShareActivity", "Cannot write to external storage");
-            // TODO notify user external storage is not available even though we have the permissions
+            // TODO notify user external storage is not available even though we have permissions
         }
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.upload);
-        mServer = new NanoHttpdServer(this);
+                mServer = new NanoHttpdServer(this);
 
         try {
             mServer.start();
-            if (mServer != null) {
-                registerService();
-            }
         } catch (IOException e) {
             Log.e("ShareActivity", "NanoHttpd mServer cannot be started.");
         }
+
+		if (mServer != null) {
+                registerService();
+			setContentView(R.layout.activity_browse);
+			//mServiceInfo = TODO
+			ViewGroup group = (ViewGroup) 							findViewById(R.id.activity_browse);
+        		TextView titleView = (TextView) 							group.findViewById(R.id.browse_title);
+// TODO
+        		titleView.setText("File shared by: ");
+mWebView = (WebView) group.findViewById(R.id.browse_webview);
+        WebSettings settings = mWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+        mWebView.setWebViewClient(new WebViewClient());
+        mWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView webView,
+                                             ValueCallback<Uri[]> filePathCallback,
+                                             WebChromeClient.FileChooserParams fileChooserParams)
+            {
+                Intent intent = fileChooserParams.createIntent();
+                mFilePathCallback = filePathCallback;
+                startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                return true;
+            }
+        });
+// OTOD remove this hard code
+mWebView.loadUrl("http://localhost:8080");
+
+            } else {
+			setContentView(R.layout.activity_share);
+			Toolbar toolbar = (Toolbar) 							findViewById(R.id.toolbar);
+        		setSupportActionBar(toolbar);
+		}
+	}
     }
+
+@Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            mFilePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
+            mFilePathCallback = null;
+        }
+    }
+
 
     @Override
     public void onDestroy() {
