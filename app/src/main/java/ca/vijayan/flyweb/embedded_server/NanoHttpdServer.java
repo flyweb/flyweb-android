@@ -16,6 +16,7 @@ public class NanoHttpdServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
     private final String NANOHTTPD_KEY = "file";
 
+    private int port;
     private Activity mActivity;
     private boolean mSuccess;
     private List<File> mFiles;
@@ -23,6 +24,7 @@ public class NanoHttpdServer extends NanoHTTPD {
 
     public NanoHttpdServer(Activity activity) {
         super(DEFAULT_PORT);
+        port = DEFAULT_PORT;
         mActivity = activity;
         mFiles = new ArrayList<>();
     }
@@ -97,6 +99,10 @@ public class NanoHttpdServer extends NanoHTTPD {
 
     public String getServiceName() {
         return mServiceName;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     private Response generateHtmlResponse(String content) {

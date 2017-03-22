@@ -6,11 +6,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.*;
 import android.widget.TextView;
@@ -22,13 +24,15 @@ import java.io.IOException;
 
 public class ShareActivity extends AppCompatActivity {
     private final int FILE_CHOOSER_REQUEST_CODE = 1;
+    private final String LOCALHOST = "http://localhost:";
+
     private ProgressDialog mProgressDialog = null;
     private NanoHttpdServer mServer = null;
     private NsdManager mNsdManager;
     private NsdManager.RegistrationListener mRegistrationListener;
-    private DNSServiceInfo mServiceInfo;
     private WebView mWebView;
     private ValueCallback<Uri[]> mFilePathCallback;
+    private String title;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +40,7 @@ public class ShareActivity extends AppCompatActivity {
         setContentView(R.layout.activity_browse);
 
         boolean havePermissions = Common.checkPermissions(this);
+        title = "File shared by: " + Build.MODEL;
 
         if (havePermissions) {
             if (!isExternalStorageWritable()) {
@@ -54,10 +59,9 @@ public class ShareActivity extends AppCompatActivity {
             if (mServer != null) {
                 registerService();
                 setContentView(R.layout.activity_browse);
-                //mServiceInfo = TODO
                 ViewGroup group = (ViewGroup) findViewById(R.id.activity_browse);
-                TextView titleView = (TextView) group.findViewById(R.id.browse_title); // TODO
-                titleView.setText("File shared by: ");
+                TextView titleView = (TextView) group.findViewById(R.id.browse_title);
+                titleView.setText(title);
                 mWebView = (WebView) group.findViewById(R.id.browse_webview);
                 WebSettings settings = mWebView.getSettings();
                 settings.setJavaScriptEnabled(true);
@@ -77,12 +81,10 @@ public class ShareActivity extends AppCompatActivity {
                         return true;
                     }
                 });
-// OTOD remove this hard code
-                mWebView.loadUrl("http://localhost:8080");
-
+                mWebView.loadUrl(LOCALHOST + mServer.getPort());
             } else {
                 setContentView(R.layout.activity_share);
-                Toolbar toolbar = (Toolbar) 							findViewById(R.id.toolbar);
+                Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
                 setSupportActionBar(toolbar);
             }
         }
@@ -96,7 +98,6 @@ public class ShareActivity extends AppCompatActivity {
         }
     }
 
-
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -104,6 +105,15 @@ public class ShareActivity extends AppCompatActivity {
             mServer.stop();
             mNsdManager.unregisterService(mRegistrationListener);
         }
+    }
+
+    public void onHamburgerButtonClicked(View view) {
+        super.onBackPressed();
+        finish();
+    }
+
+    public void onReloadButtonClicked(View view) {
+        mWebView.reload();
     }
 
     public void registerService() {
