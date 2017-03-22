@@ -2,25 +2,33 @@ package ca.vijayan.flyweb;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.ViewGroup;
+import android.webkit.*;
+import android.widget.TextView;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.NanoHttpdServer;
+import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 
 import java.io.IOException;
 
 public class ShareActivity extends AppCompatActivity {
+    private final int FILE_CHOOSER_REQUEST_CODE = 1;
     private ProgressDialog mProgressDialog = null;
     private NanoHttpdServer mServer = null;
     private NsdManager mNsdManager;
     private NsdManager.RegistrationListener mRegistrationListener;
     private DNSServiceInfo mServiceInfo;
+    private WebView mWebView;
+    private ValueCallback<Uri[]> mFilePathCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,60 +36,59 @@ public class ShareActivity extends AppCompatActivity {
         setContentView(R.layout.activity_browse);
 
         boolean havePermissions = Common.checkPermissions(this);
-	   
-	   if (havePermissions) {
-        if (!isExternalStorageWritable()) {
-            Log.e("ShareActivity", "Cannot write to external storage");
-            // TODO notify user external storage is not available even though we have permissions
-        }
 
-                mServer = new NanoHttpdServer(this);
-
-        try {
-            mServer.start();
-        } catch (IOException e) {
-            Log.e("ShareActivity", "NanoHttpd mServer cannot be started.");
-        }
-
-		if (mServer != null) {
-                registerService();
-			setContentView(R.layout.activity_browse);
-			//mServiceInfo = TODO
-			ViewGroup group = (ViewGroup) 							findViewById(R.id.activity_browse);
-        		TextView titleView = (TextView) 							group.findViewById(R.id.browse_title);
-// TODO
-        		titleView.setText("File shared by: ");
-mWebView = (WebView) group.findViewById(R.id.browse_webview);
-        WebSettings settings = mWebView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
-        mWebView.setWebViewClient(new WebViewClient());
-        mWebView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(WebView webView,
-                                             ValueCallback<Uri[]> filePathCallback,
-                                             WebChromeClient.FileChooserParams fileChooserParams)
-            {
-                Intent intent = fileChooserParams.createIntent();
-                mFilePathCallback = filePathCallback;
-                startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
-                return true;
+        if (havePermissions) {
+            if (!isExternalStorageWritable()) {
+                Log.e("ShareActivity", "Cannot write to external storage");
+                // TODO notify user external storage is not available even though we have permissions
             }
-        });
+
+            mServer = new NanoHttpdServer(this);
+
+            try {
+                mServer.start();
+            } catch (IOException e) {
+                Log.e("ShareActivity", "NanoHttpd mServer cannot be started.");
+            }
+
+            if (mServer != null) {
+                registerService();
+                setContentView(R.layout.activity_browse);
+                //mServiceInfo = TODO
+                ViewGroup group = (ViewGroup) findViewById(R.id.activity_browse);
+                TextView titleView = (TextView) group.findViewById(R.id.browse_title); // TODO
+                titleView.setText("File shared by: ");
+                mWebView = (WebView) group.findViewById(R.id.browse_webview);
+                WebSettings settings = mWebView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setSupportZoom(true);
+                settings.setBuiltInZoomControls(true);
+                settings.setDisplayZoomControls(false);
+                mWebView.setWebViewClient(new WebViewClient());
+                mWebView.setWebChromeClient(new WebChromeClient() {
+                    @Override
+                    public boolean onShowFileChooser(WebView webView,
+                                                     ValueCallback<Uri[]> filePathCallback,
+                                                     WebChromeClient.FileChooserParams fileChooserParams)
+                    {
+                        Intent intent = fileChooserParams.createIntent();
+                        mFilePathCallback = filePathCallback;
+                        startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                        return true;
+                    }
+                });
 // OTOD remove this hard code
-mWebView.loadUrl("http://localhost:8080");
+                mWebView.loadUrl("http://localhost:8080");
 
             } else {
-			setContentView(R.layout.activity_share);
-			Toolbar toolbar = (Toolbar) 							findViewById(R.id.toolbar);
-        		setSupportActionBar(toolbar);
-		}
-	}
+                setContentView(R.layout.activity_share);
+                Toolbar toolbar = (Toolbar) 							findViewById(R.id.toolbar);
+                setSupportActionBar(toolbar);
+            }
+        }
     }
 
-@Override
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             mFilePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
