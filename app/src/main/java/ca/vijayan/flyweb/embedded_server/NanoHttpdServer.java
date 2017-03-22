@@ -6,7 +6,10 @@ import android.util.Log;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Irene Chen on 3/12/2017.
@@ -15,7 +18,7 @@ import java.util.*;
 public class NanoHttpdServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
     private final String NANOHTTPD_KEY = "file";
-
+    private final String MIME_CSS = "text/css";
     private int port;
     private Activity mActivity;
     private boolean mSuccess;
@@ -31,6 +34,16 @@ public class NanoHttpdServer extends NanoHTTPD {
 
     @Override
     public Response serve(IHTTPSession session) {
+        String uri = session.getUri();
+        if (uri.endsWith(".css")) {
+            try {
+                InputStream is = mActivity.getApplicationContext().getAssets().open(uri.substring(1));
+                return newChunkedResponse(Response.Status.OK, MIME_CSS, is);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("NanoHttpdServer", "Failed to get style sheets");
+            }
+        }
         return Method.POST.equals(session.getMethod()) ? post(session) : get();
     }
 
@@ -106,8 +119,9 @@ public class NanoHttpdServer extends NanoHTTPD {
     }
 
     private Response generateHtmlResponse(String content) {
-        Response response = newFixedLengthResponse(new StringBuilder("<html><body>").append(content)
-                .append("</body></html>").toString());
+        Response response = newFixedLengthResponse(new StringBuilder("<html><head><link rel=\"stylesheet\" type=" +
+                "\"text/css\" href=\"bootstrap.min.css\"></head><body><p>").append(content).append("</p></body></html>")
+                .toString());
         return response;
     }
 
