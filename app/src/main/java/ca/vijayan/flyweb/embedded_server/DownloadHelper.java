@@ -107,7 +107,7 @@ public class DownloadHelper {
                                 outFile.delete();
                                 outFile.createNewFile();
                             } catch (IOException e) {
-                                Log.e("NanoHttpdServer", "Cannot overwrite and create new file.");
+                                Log.e("EmbeddedServer", "Cannot overwrite and create new file.");
                                 notifyThread();
                                 return;
                             }

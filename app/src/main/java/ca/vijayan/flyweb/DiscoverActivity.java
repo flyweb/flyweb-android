@@ -139,7 +139,6 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
                     return false;
                 } catch (IOException e) {
                     Log.e("DiscoverActivity", "Failed to open URL connection.");
-                    e.printStackTrace();
                     return false;
                 }
             }

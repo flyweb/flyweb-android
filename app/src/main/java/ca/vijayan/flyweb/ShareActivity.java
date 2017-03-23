@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
@@ -17,8 +16,7 @@ import android.view.ViewGroup;
 import android.webkit.*;
 import android.widget.TextView;
 import ca.vijayan.flyweb.embedded_server.Common;
-import ca.vijayan.flyweb.embedded_server.NanoHttpdServer;
-import ca.vijayan.flyweb.mdns.DNSServiceInfo;
+import ca.vijayan.flyweb.embedded_server.EmbeddedServer;
 
 import java.io.IOException;
 
@@ -27,12 +25,11 @@ public class ShareActivity extends AppCompatActivity {
     private final String LOCALHOST = "http://localhost:";
 
     private ProgressDialog mProgressDialog = null;
-    private NanoHttpdServer mServer = null;
+    private EmbeddedServer mServer = null;
     private NsdManager mNsdManager;
     private NsdManager.RegistrationListener mRegistrationListener;
     private WebView mWebView;
     private ValueCallback<Uri[]> mFilePathCallback;
-    private String title;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,20 +37,18 @@ public class ShareActivity extends AppCompatActivity {
         setContentView(R.layout.activity_browse);
 
         boolean havePermissions = Common.checkPermissions(this);
-        title = "File shared by: " + Build.MODEL;
-
         if (havePermissions) {
             if (!isExternalStorageWritable()) {
                 Log.e("ShareActivity", "Cannot write to external storage");
                 // TODO notify user external storage is not available even though we have permissions
             }
 
-            mServer = new NanoHttpdServer(this);
+            mServer = new EmbeddedServer(this);
 
             try {
                 mServer.start();
             } catch (IOException e) {
-                Log.e("ShareActivity", "NanoHttpd mServer cannot be started.");
+                Log.e("ShareActivity", "Embedded server cannot be started.");
             }
 
             if (mServer != null) {
@@ -61,7 +56,7 @@ public class ShareActivity extends AppCompatActivity {
                 setContentView(R.layout.activity_browse);
                 ViewGroup group = (ViewGroup) findViewById(R.id.activity_browse);
                 TextView titleView = (TextView) group.findViewById(R.id.browse_title);
-                titleView.setText(title);
+                titleView.setText(mServer.getServiceName());
                 mWebView = (WebView) group.findViewById(R.id.browse_webview);
                 WebSettings settings = mWebView.getSettings();
                 settings.setJavaScriptEnabled(true);
@@ -120,7 +115,7 @@ public class ShareActivity extends AppCompatActivity {
         NsdServiceInfo serviceInfo = new NsdServiceInfo();
         serviceInfo.setServiceName(mServer.getServiceName());
         serviceInfo.setServiceType("_flyweb._tcp");
-        serviceInfo.setPort(NanoHttpdServer.DEFAULT_PORT);
+        serviceInfo.setPort(EmbeddedServer.DEFAULT_PORT);
         initializeRegistrationListener();
         mNsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
         mNsdManager.registerService(
