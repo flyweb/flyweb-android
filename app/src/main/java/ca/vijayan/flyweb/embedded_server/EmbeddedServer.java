@@ -20,6 +20,7 @@ public class EmbeddedServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
     private final String NANOHTTPD_KEY = "file";
     private final String MIME_CSS = "text/css";
+    private final int MAX_FILE_SIZE_IN_BYTES = 5000000;
     private int port;
     private Activity mActivity;
     private boolean mSuccess;
@@ -150,12 +151,17 @@ public class EmbeddedServer extends NanoHTTPD {
     }
 
     private void write(String srcPath, File outFile) {
+	   int totalBytesRead = 0;
         try {
             File inFile = new File(srcPath);
             InputStream inStream = new FileInputStream(inFile);
             OutputStream outStream = new FileOutputStream(outFile);
             int bytesRead;
             while ((bytesRead = inStream.read()) > -1) {
+                totalBytesRead += bytesRead;
+                if (totalBytesRead > MAX_FILE_SIZE_IN_BYTES) {
+				return;
+                }
                 outStream.write(bytesRead);
             }
             mFiles.add(outFile);
