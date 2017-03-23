@@ -153,6 +153,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
         if (header.equals("false")) {
             if (Common.checkPermissions(this)) {
+			handleToast(Strings.DOWNLOAD_STARTED);
                 boolean downloadSuccess = new DownloadHelper(connection, activity).download();
                 if (downloadSuccess) {
                     handleToast(Strings.DOWNLOAD_SUCCESSFUL);

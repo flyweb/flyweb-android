@@ -63,7 +63,29 @@ public class ShareActivity extends AppCompatActivity {
                 settings.setSupportZoom(true);
                 settings.setBuiltInZoomControls(true);
                 settings.setDisplayZoomControls(false);
-                mWebView.setWebViewClient(new WebViewClient());
+                mWebView.setWebViewClient(new WebViewClient() {
+				@Override
+				public boolean shouldOverrideUrlLoading(WebView view, String url) {
+					view.loadUrl(url);
+					return true;
+				}
+				
+				@Override
+				public void onPageStarted(WebView view, String url, Bitmap favicon) {
+					super.onPageStarted(view, url, favicon);
+					mProgressDialog = new ProgressDialog(ShareActivity.this);
+					progressDialog.setMessage("Uploading . . .");
+	progressDialog.show();
+					}
+
+				@Override
+				public void onPageFinished(WebView view, String url) {
+					super.onPageFinished(view, url);
+					if (mProgressDialog != null) {
+						mProgressDialog.dismiss();
+					}
+				}
+});
                 mWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public boolean onShowFileChooser(WebView webView,

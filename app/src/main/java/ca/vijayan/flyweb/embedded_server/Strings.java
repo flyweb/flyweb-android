@@ -17,7 +17,8 @@ public class Strings {
     public static final String OVERWRITE_PERMISSION_REQUEST = "Do you want to overwrite the existing file?";
     public static final String YES = "Yes";
     public static final String NO = "No";
-
+	
+	public static final String DOWNLOAD_STARTED = "Your download has started.";
 	public static final String DOWNLOAD_UNSUCCESSFUL = "Failed to download file.";
     public static final String DOWNLOAD_SUCCESSFUL = "Download successful.";
     public static final String NO_FILES_AVAILABLE = "No file available for download.";
