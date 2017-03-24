@@ -3,6 +3,7 @@ package ca.vijayan.flyweb;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
@@ -17,12 +18,12 @@ import android.webkit.*;
 import android.widget.TextView;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.EmbeddedServer;
+import ca.vijayan.flyweb.embedded_server.Strings;
 
 import java.io.IOException;
 
 public class ShareActivity extends AppCompatActivity {
     private final int FILE_CHOOSER_REQUEST_CODE = 1;
-    private final String LOCALHOST = "http://localhost:";
 
     private ProgressDialog mProgressDialog = null;
     private EmbeddedServer mServer = null;
@@ -64,28 +65,32 @@ public class ShareActivity extends AppCompatActivity {
                 settings.setBuiltInZoomControls(true);
                 settings.setDisplayZoomControls(false);
                 mWebView.setWebViewClient(new WebViewClient() {
-				@Override
-				public boolean shouldOverrideUrlLoading(WebView view, String url) {
-					view.loadUrl(url);
-					return true;
-				}
-				
-				@Override
-				public void onPageStarted(WebView view, String url, Bitmap favicon) {
-					super.onPageStarted(view, url, favicon);
-					mProgressDialog = new ProgressDialog(ShareActivity.this);
-					progressDialog.setMessage("Uploading . . .");
-	progressDialog.show();
-					}
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        view.loadUrl(url);
+                        return true;
+                    }
 
-				@Override
-				public void onPageFinished(WebView view, String url) {
-					super.onPageFinished(view, url);
-					if (mProgressDialog != null) {
-						mProgressDialog.dismiss();
-					}
-				}
-});
+                    @Override
+                    public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                        super.onPageStarted(view, url, favicon);
+                        if (url.equals(new StringBuilder(Common.LOCALHOST).append(mServer.getPort()).append(Common.
+                                UPLOAD_ENDPOINT).toString())) {
+                            mProgressDialog = new ProgressDialog(ShareActivity.this);
+                            mProgressDialog.setMessage(Strings.UPLOADING);
+                            mProgressDialog.setCanceledOnTouchOutside(false);
+                            mProgressDialog.show();
+                        }
+                    }
+
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        super.onPageFinished(view, url);
+                        if (mProgressDialog != null) {
+                            mProgressDialog.dismiss();
+                        }
+                    }
+                });
                 mWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public boolean onShowFileChooser(WebView webView,
@@ -98,7 +103,7 @@ public class ShareActivity extends AppCompatActivity {
                         return true;
                     }
                 });
-                mWebView.loadUrl(LOCALHOST + mServer.getPort());
+                mWebView.loadUrl(Common.LOCALHOST + mServer.getPort());
             } else {
                 setContentView(R.layout.activity_share);
                 Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);

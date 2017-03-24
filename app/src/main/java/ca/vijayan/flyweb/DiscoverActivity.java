@@ -11,9 +11,11 @@ import android.widget.ListView;
 import android.widget.Toast;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.DownloadHelper;
+import ca.vijayan.flyweb.embedded_server.DownloadStatus;
 import ca.vijayan.flyweb.embedded_server.Strings;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
+import ca.vijayan.flyweb.utils.UiMethods;
 
 import java.io.File;
 import java.io.IOException;
@@ -153,25 +155,22 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
         if (header.equals("false")) {
             if (Common.checkPermissions(this)) {
-			handleToast(Strings.DOWNLOAD_STARTED);
-                boolean downloadSuccess = new DownloadHelper(connection, activity).download();
-                if (downloadSuccess) {
-                    handleToast(Strings.DOWNLOAD_SUCCESSFUL);
-                } else {
-                    handleToast(Strings.DOWNLOAD_UNSUCCESSFUL);
+                DownloadStatus downloadSuccess = new DownloadHelper(connection, activity).download();
+                switch (downloadSuccess) {
+                    case Success:
+                        UiMethods.handleToast(Strings.DOWNLOAD_SUCCESSFUL, this);
+                        break;
+                    case Failure:
+                        UiMethods.handleToast(Strings.DOWNLOAD_UNSUCCESSFUL, this);
+                        break;
+                    case DidNotOverwrite:
+                        UiMethods.handleToast(Strings.DID_NOT_DOWNLOAD, this);
+
                 }
             }
         } else {
-            handleToast(Strings.NO_FILES_AVAILABLE);
+            UiMethods.handleToast(Strings.NO_FILES_AVAILABLE, this);
         }
         return true;
-    }
-
-    private void handleToast(final String text) {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 }

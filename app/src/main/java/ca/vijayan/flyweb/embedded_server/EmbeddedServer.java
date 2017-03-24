@@ -54,9 +54,10 @@ public class EmbeddedServer extends NanoHTTPD {
         if (mFiles.isEmpty()) {
             response = generateGenericHtmlResponse("<div class =\"jumbotron\">"
                     + "<h1 class=\"display-3\">Upload File</h3>"
-                    + "<form name='up' method='post' enctype='multipart/form-data'>"
+                    + "<form name='upload' method='post' enctype='multipart/form-data' action='" + Common.LOCALHOST
+                    + port + Common.UPLOAD_ENDPOINT + "' />"
                     + "<input type='file' name='file' /><br />"
-                    + "<input type='submit'name='submit' value='" + Strings.UPLOAD + "' />"
+                    + "<input type='submit' name='submit' value='" + Strings.UPLOAD + "' />"
                     + "</div>");
         } else {
             try {
@@ -151,17 +152,13 @@ public class EmbeddedServer extends NanoHTTPD {
     }
 
     private void write(String srcPath, File outFile) {
-	   int totalBytesRead = 0;
+        int totalBytesRead = 0;
         try {
             File inFile = new File(srcPath);
             InputStream inStream = new FileInputStream(inFile);
             OutputStream outStream = new FileOutputStream(outFile);
             int bytesRead;
             while ((bytesRead = inStream.read()) > -1) {
-                totalBytesRead += bytesRead;
-                if (totalBytesRead > MAX_FILE_SIZE_IN_BYTES) {
-				return;
-                }
                 outStream.write(bytesRead);
             }
             mFiles.add(outFile);

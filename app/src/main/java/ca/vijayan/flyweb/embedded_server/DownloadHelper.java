@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import ca.vijayan.flyweb.DiscoverActivity;
+import ca.vijayan.flyweb.utils.UiMethods;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -19,15 +21,15 @@ import java.net.HttpURLConnection;
 public class DownloadHelper {
     private HttpURLConnection mConn;
     private Activity mActivity;
-    private boolean mSuccess;
+    private DownloadStatus status;
 
     public DownloadHelper(HttpURLConnection conn, Activity activity) {
         mConn = conn;
         mActivity = activity;
     }
 
-    public boolean download() {
-        mSuccess = false;
+    public DownloadStatus download() {
+        status = DownloadStatus.Failure;
         String originalFileName = mConn.getHeaderField(Common.HEADER_FILENAME_KEY);
 
         boolean dirExists = checkDir();
@@ -49,16 +51,18 @@ public class DownloadHelper {
             }
         }
 
-        try {
-            DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
-            downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
-                    fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(), true);
-            mSuccess = true;
-        } catch (Exception e) {
-            Log.e("DownloadHelper", Strings.DOWNLOAD_UNSUCCESSFUL);
+        if (status.equals(DownloadStatus.Failure)) {
+            try {
+                DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
+                downloadManager.addCompletedDownload(originalFileName, originalFileName, true, Common.getMimeType(Uri.
+                        fromFile(outFile).toString()), outFile.getAbsolutePath(), outFile.length(), true);
+                status = DownloadStatus.Success;
+            } catch (Exception e) {
+                Log.e("DownloadHelper", Strings.DOWNLOAD_UNSUCCESSFUL);
+            }
         }
 
-        return mSuccess;
+        return status;
     }
 
     private boolean checkDir() {
@@ -71,6 +75,7 @@ public class DownloadHelper {
     }
 
     private void read(File outFile) {
+        UiMethods.handleToast(Strings.DOWNLOAD_STARTED, mActivity);
         try {
             InputStream inStream = mConn.getInputStream();
             OutputStream outStream = new FileOutputStream(outFile);
@@ -118,6 +123,7 @@ public class DownloadHelper {
                     .setNegativeButton(Strings.NO, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
+                            status = DownloadStatus.DidNotOverwrite;
                             notifyThread();
                         }
                     })

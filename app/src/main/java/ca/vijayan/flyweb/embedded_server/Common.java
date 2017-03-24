@@ -16,6 +16,8 @@ import java.io.File;
 public class Common {
     public static final String FLYWEB_HEADER = "Flyweb";
     public static final String HEADER_FILENAME_KEY = "fileName";
+    public static final String LOCALHOST = "http://localhost:";
+    public static final String UPLOAD_ENDPOINT = "/upload";
     public static final File DIRECTORY_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
