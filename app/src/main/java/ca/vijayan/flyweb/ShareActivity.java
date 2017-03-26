@@ -145,8 +145,7 @@ public class ShareActivity extends AppCompatActivity {
         serviceInfo.setPort(EmbeddedServer.DEFAULT_PORT);
         initializeRegistrationListener();
         mNsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
-        mNsdManager.registerService(
-                serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+        mNsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
     }
 
     private boolean isExternalStorageWritable() {

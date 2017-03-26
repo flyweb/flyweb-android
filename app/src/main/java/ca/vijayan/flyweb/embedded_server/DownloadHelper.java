@@ -15,7 +15,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 
 /**
- * Created by karui on 3/18/2017.
+ * Created by Irene Chen on 3/18/2017.
  */
 
 public class DownloadHelper {

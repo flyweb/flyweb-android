@@ -10,7 +10,7 @@ import android.webkit.MimeTypeMap;
 import java.io.File;
 
 /**
- * Created by karui on 3/18/2017.
+ * Created by Irene Chen on 3/18/2017.
  */
 
 public class Common {
