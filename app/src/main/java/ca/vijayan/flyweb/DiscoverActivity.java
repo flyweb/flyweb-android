@@ -79,9 +79,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
     public void onItemSelected(View target) {
         mFilesToDownload = new ArrayList<>();
-        if (isEmbeddedServer((DNSServiceInfo) target.getTag(), this)) {
-            // don't do anything
-        } else {
+        if (!isEmbeddedServer((DNSServiceInfo) target.getTag(), this)) {
             Intent intent = new Intent(this, BrowseActivity.class);
             DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
             intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
