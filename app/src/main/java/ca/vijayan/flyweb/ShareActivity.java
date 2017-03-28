@@ -3,6 +3,7 @@ package ca.vijayan.flyweb;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.nsd.NsdManager;
@@ -14,7 +15,10 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.*;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.TextView;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.EmbeddedServer;
@@ -24,6 +28,7 @@ import java.io.IOException;
 
 public class ShareActivity extends AppCompatActivity {
     private final int FILE_CHOOSER_REQUEST_CODE = 1;
+    private final String TAG = "ShareActivity";
 
     private ProgressDialog mProgressDialog = null;
     private EmbeddedServer mServer = null;
@@ -40,7 +45,7 @@ public class ShareActivity extends AppCompatActivity {
         boolean havePermissions = Common.checkPermissions(this);
         if (havePermissions) {
             if (!isExternalStorageWritable()) {
-                Log.e("ShareActivity", "Cannot write to external storage");
+                Log.e(TAG, "Cannot write to external storage");
                 // TODO notify user external storage is not available even though we have permissions
             }
 
@@ -49,7 +54,7 @@ public class ShareActivity extends AppCompatActivity {
             try {
                 mServer.start();
             } catch (IOException e) {
-                Log.e("ShareActivity", "Embedded server cannot be started.");
+                Log.e(TAG, "Embedded server cannot be started.");
             }
 
             if (mServer != null) {
@@ -59,18 +64,9 @@ public class ShareActivity extends AppCompatActivity {
                 TextView titleView = (TextView) group.findViewById(R.id.browse_title);
                 titleView.setText(mServer.getServiceName());
                 mWebView = (WebView) group.findViewById(R.id.browse_webview);
-                WebSettings settings = mWebView.getSettings();
-                settings.setJavaScriptEnabled(true);
-                settings.setSupportZoom(true);
-                settings.setBuiltInZoomControls(true);
-                settings.setDisplayZoomControls(false);
-                mWebView.setWebViewClient(new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        view.loadUrl(url);
-                        return true;
-                    }
+                ca.vijayan.flyweb.utils.Common.configureWebSettings(mWebView);
 
+                mWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public void onPageStarted(WebView view, String url, Bitmap favicon) {
                         super.onPageStarted(view, url, favicon);
@@ -91,6 +87,7 @@ public class ShareActivity extends AppCompatActivity {
                         }
                     }
                 });
+
                 mWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public boolean onShowFileChooser(WebView webView,
@@ -103,6 +100,7 @@ public class ShareActivity extends AppCompatActivity {
                         return true;
                     }
                 });
+
                 mWebView.loadUrl(Common.LOCALHOST + mServer.getPort());
             } else {
                 setContentView(R.layout.activity_share);
@@ -165,7 +163,7 @@ public class ShareActivity extends AppCompatActivity {
 
             @Override
             public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                Log.e("ShareActivity", "Failed to register embedded server.");
+                Log.e(TAG, "Failed to register embedded server.");
             }
 
             @Override
@@ -174,7 +172,7 @@ public class ShareActivity extends AppCompatActivity {
 
             @Override
             public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                Log.e("ShareActivity", "Failed to unregister embedded server.");
+                Log.e(TAG, "Failed to unregister embedded server.");
             }
         };
     }

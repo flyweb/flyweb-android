@@ -24,7 +24,8 @@
         <activity
                 android:name=".ShareActivity"
                 android:label="@string/title_activity_share"
-                android:theme="@style/AppTheme.NoActionBar">
+                android:theme="@style/AppTheme.NoActionBar"
+                android:screenOrientation="portrait">
         </activity>
     </application>
 

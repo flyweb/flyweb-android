@@ -2,13 +2,15 @@ package ca.vijayan.flyweb;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.os.*;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
-import android.widget.Toast;
 import ca.vijayan.flyweb.embedded_server.Common;
 import ca.vijayan.flyweb.embedded_server.DownloadHelper;
 import ca.vijayan.flyweb.embedded_server.DownloadStatus;
@@ -78,7 +80,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     public void onItemSelected(View target) {
         mFilesToDownload = new ArrayList<>();
         if (isEmbeddedServer((DNSServiceInfo) target.getTag(), this)) {
-            // TODO
+            // don't do anything
         } else {
             Intent intent = new Intent(this, BrowseActivity.class);
             DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();

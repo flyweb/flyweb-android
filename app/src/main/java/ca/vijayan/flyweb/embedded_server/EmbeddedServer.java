@@ -18,9 +18,10 @@ import java.util.Map;
 
 public class EmbeddedServer extends NanoHTTPD {
     public  static final int DEFAULT_PORT = 8080; // TODO make port allocation dynamic
+    private static final String TAG = "EmbeddedServer";
+
     private final String NANOHTTPD_KEY = "file";
     private final String MIME_CSS = "text/css";
-    private final int MAX_FILE_SIZE_IN_BYTES = 5000000;
     private int port;
     private Activity mActivity;
     private boolean mSuccess;
@@ -43,7 +44,7 @@ public class EmbeddedServer extends NanoHTTPD {
                 InputStream is = mActivity.getApplicationContext().getAssets().open(uri.substring(1));
                 return newChunkedResponse(Response.Status.OK, MIME_CSS, is);
             } catch (IOException e) {
-                Log.e("EmbeddedServer", "Failed to get style sheets.");
+                Log.e(TAG, "Failed to get style sheets.");
             }
         }
         return Method.POST.equals(session.getMethod()) ? post(session) : get();
@@ -61,14 +62,14 @@ public class EmbeddedServer extends NanoHTTPD {
                     + "</div>");
         } else {
             try {
-                for (File file : mFiles) { // there should only be one element in the map right now; return on first loop
+                for (File file : mFiles) { // only supporting single file download right now; return on first loop
                     FileInputStream fis = new FileInputStream(file);
                     response = newChunkedResponse(Response.Status.OK, Common.getMimeType(Uri.fromFile(file).toString()),
                             fis);
                     response.addHeader(Common.HEADER_FILENAME_KEY, file.getName());
                 }
             } catch (Exception e) {
-                Log.e("EmbeddedServer", "Error download files.");
+                Log.e(TAG, "Error download files.");
                 response = generateHtmlResponseWithLeadClass(Strings.DOWNLOAD_UNSUCCESSFUL);
             }
         }
@@ -85,11 +86,11 @@ public class EmbeddedServer extends NanoHTTPD {
             session.parseBody(files);
             params = session.getParameters();
         } catch (ResponseException | IOException e) {
-            Log.e("EmbeddedServer", "Error reading uploaded file.");
+            Log.e(TAG, "Error reading uploaded file.");
             return generateHtmlResponseWithLeadClass(Strings.ERROR_READING);
         }
 
-        // TODO iterate over map for multiple files
+        // TODO iterate over list for supporting multiple file uploads
         String tempFilePath = files.get(NANOHTTPD_KEY);
         if (tempFilePath == null || tempFilePath.isEmpty()) {
             return generateHtmlResponseWithLeadClass(Strings.PLEASE_UPLOAD_VALID_FILE);
@@ -106,14 +107,8 @@ public class EmbeddedServer extends NanoHTTPD {
         File outFile = new File(Common.DIRECTORY_PATH, originalFileName);
         write(tempFilePath, outFile);
 
-        Response response = null;
-        if (mSuccess) {
-            response = generateHtmlResponseWithLeadClass(Strings.SUCCESSFULLY_UPLOADED);
-        } else {
-            response = generateHtmlResponseWithLeadClass(Strings.FAILED_UPLOAD);
-        }
-
-        return response;
+        return mSuccess ? generateHtmlResponseWithLeadClass(Strings.SUCCESSFULLY_UPLOADED) :
+                generateHtmlResponseWithLeadClass(Strings.FAILED_UPLOAD);
     }
 
     public String getServiceName() {
@@ -152,7 +147,6 @@ public class EmbeddedServer extends NanoHTTPD {
     }
 
     private void write(String srcPath, File outFile) {
-        int totalBytesRead = 0;
         try {
             File inFile = new File(srcPath);
             InputStream inStream = new FileInputStream(inFile);
@@ -166,7 +160,7 @@ public class EmbeddedServer extends NanoHTTPD {
             outStream.close();
             mSuccess = true;
         } catch (Exception e) {
-            Log.e("EmbeddedServer", "Error writing out file when uploading.");
+            Log.e(TAG, "Error writing out file when uploading.");
         }
     }
 }

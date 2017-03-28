@@ -19,6 +19,8 @@ import java.net.HttpURLConnection;
  */
 
 public class DownloadHelper {
+    private static final String TAG = "DownloadHelper";
+
     private HttpURLConnection mConn;
     private Activity mActivity;
     private DownloadStatus status;
@@ -37,20 +39,27 @@ public class DownloadHelper {
         File outFile = new File(Common.DIRECTORY_PATH, originalFileName);
         if (dirExists) {
             if (outFile.exists()) {
+                // UI needs to handled by a separate thread; do not proceed with the current method until we get user
+                // input from the UI thread
                 Thread t = new DownloadHelper.OverwriteDialogThread(outFile);
                 t.start();
                 synchronized (t) {
                     try {
                         t.wait();
                     } catch (InterruptedException e) {
-                        Log.e("DownloadHelper", "Overwrite confirmation dialog interrupted.");
+                        Log.e(TAG, "Overwrite confirmation dialog interrupted.");
                     }
                 }
             } else {
                 read(outFile);
             }
+        } else {
+            Log.e(TAG, "Download directory does not exist and cannot be created.");
+            return status;
         }
 
+        // status can be Failure or DidNotOverwrite at this point
+        // do not download the file if the user has indicated that the file should not be overwritten
         if (status.equals(DownloadStatus.Failure)) {
             try {
                 DownloadManager downloadManager = (DownloadManager) mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE);
@@ -86,7 +95,7 @@ public class DownloadHelper {
             inStream.close();
             outStream.close();
         } catch (IOException e) {
-            Log.e("DownloadHelper", "Error reading in file response");
+            Log.e(TAG, "Error reading in file.");
         }
     }
 
@@ -112,7 +121,7 @@ public class DownloadHelper {
                                 outFile.delete();
                                 outFile.createNewFile();
                             } catch (IOException e) {
-                                Log.e("EmbeddedServer", "Cannot overwrite and create new file.");
+                                Log.e(TAG, "Cannot overwrite and create new file.");
                                 notifyThread();
                                 return;
                             }

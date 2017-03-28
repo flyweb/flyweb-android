@@ -21,6 +21,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
+import ca.vijayan.flyweb.utils.Common;
 
 public class BrowseActivity extends Activity {
 
@@ -48,11 +49,7 @@ public class BrowseActivity extends Activity {
         titleView.setText(mServiceInfo.displayName());
 
         mWebView = (WebView) group.findViewById(R.id.browse_webview);
-        WebSettings settings = mWebView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
+        Common.configureWebSettings(mWebView);
         mWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {

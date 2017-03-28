@@ -2,6 +2,7 @@ package ca.vijayan.flyweb.embedded_server;
 
 /**
  * Created by Irene Chen on 3/12/2017.
+ * This file contains the localizable strings for file uploads.
  */
 
 public class Strings {
