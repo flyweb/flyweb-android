@@ -2,6 +2,7 @@ package ca.vijayan.flyweb;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -10,11 +11,23 @@ import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
-
-import java.io.IOException;
-
+import ca.vijayan.flyweb.embedded_server.Common;
+import ca.vijayan.flyweb.embedded_server.DownloadHelper;
+import ca.vijayan.flyweb.embedded_server.DownloadStatus;
+import ca.vijayan.flyweb.embedded_server.Strings;
 import ca.vijayan.flyweb.mdns.DNSServiceInfo;
 import ca.vijayan.flyweb.mdns.MDNSManager;
+import ca.vijayan.flyweb.utils.UiMethods;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class DiscoverActivity extends Activity implements Handler.Callback {
 
@@ -24,9 +37,12 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     static public final int MESSAGE_REMOVE_SERVICE = 1;
     static public final int MESSAGE_UPDATE_SERVICE = 2;
 
+    static private final int TIMEOUT_IN_MILLIS = 30000;
+
     Handler mHandler;
     DiscoverListAdapter mDiscoverListAdapter;
     MDNSManager mMDNSManager;
+    List<File> mFilesToDownload;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +51,7 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
 
         mHandler = new Handler(this);
         mDiscoverListAdapter = new DiscoverListAdapter(this);
+        mFilesToDownload = new ArrayList<>();
 
         try {
             mMDNSManager = new MDNSManager(mHandler);
@@ -61,9 +78,17 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
     }
 
     public void onItemSelected(View target) {
-        Intent intent = new Intent(this, BrowseActivity.class);
-        DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
-        intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
+        mFilesToDownload = new ArrayList<>();
+        if (!isEmbeddedServer((DNSServiceInfo) target.getTag(), this)) {
+            Intent intent = new Intent(this, BrowseActivity.class);
+            DNSServiceInfo serviceInfo = (DNSServiceInfo) target.getTag();
+            intent.putExtra(EXTRA_SERVICE_INFO, serviceInfo);
+            startActivity(intent);
+        }
+    }
+
+    public void onShareButtonSelected(View target) {
+        Intent intent = new Intent(this, ShareActivity.class);
         startActivity(intent);
     }
 
@@ -87,5 +112,65 @@ public class DiscoverActivity extends Activity implements Handler.Callback {
             return true;
         }
         return false;
+    }
+
+    private boolean isEmbeddedServer(DNSServiceInfo dnsServiceInfo, final Activity activity) {
+        AsyncTask<DNSServiceInfo, Void, Boolean> task = getTaskForIsEmbeddedServer(activity);
+
+        boolean res = false;
+        try {
+            res = task.execute(dnsServiceInfo).get(TIMEOUT_IN_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException e) {
+            Log.d("DiscoverActivity", "Failed to get headers from URL connection.");
+        } catch (TimeoutException e) {
+            Log.d("DiscoverActivity", "Timed out while trying to check headers.");
+        }
+        return res;
+    }
+
+    private AsyncTask<DNSServiceInfo, Void, Boolean> getTaskForIsEmbeddedServer(final Activity activity) {
+        return new AsyncTask<DNSServiceInfo, Void, Boolean>() {
+            @Override
+            protected Boolean doInBackground(DNSServiceInfo... dnsServiceInfo1) {
+                try {
+                    URL object = new URL(dnsServiceInfo1[0].getBaseURL());
+                    HttpURLConnection connection = (HttpURLConnection) object.openConnection();
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        return hasFlywebHeader(connection, activity);
+                    }
+                    return false;
+                } catch (IOException e) {
+                    Log.e("DiscoverActivity", "Failed to open URL connection.");
+                    return false;
+                }
+            }
+        };
+    }
+
+    private boolean hasFlywebHeader(HttpURLConnection connection, Activity activity) {
+        String header = connection.getHeaderField(Common.FLYWEB_HEADER);
+        if (header == null) {
+            return false;
+        }
+
+        if (header.equals("false")) {
+            if (Common.checkPermissions(this)) {
+                DownloadStatus downloadSuccess = new DownloadHelper(connection, activity).download();
+                switch (downloadSuccess) {
+                    case Success:
+                        UiMethods.handleToast(Strings.DOWNLOAD_SUCCESSFUL, this);
+                        break;
+                    case Failure:
+                        UiMethods.handleToast(Strings.DOWNLOAD_UNSUCCESSFUL, this);
+                        break;
+                    case DidNotOverwrite:
+                        UiMethods.handleToast(Strings.DID_NOT_DOWNLOAD, this);
+
+                }
+            }
+        } else {
+            UiMethods.handleToast(Strings.NO_FILES_AVAILABLE, this);
+        }
+        return true;
     }
 }

@@ -43,4 +43,12 @@
 
     </ListView>
 
+    <Button
+            android:text="Share Photos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/share_files"
+            android:layout_weight="0"
+            android:onClick="onShareButtonSelected" />
+
 </LinearLayout>
